@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "File size for github.dev",
   "publisher": "yurish",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -38,17 +38,18 @@
     "commands": [
       {
         "command": "size.refreshTree",
-        "title": "Refresh",
+        "title": "Size: Refresh",
+        "shortTitle": "Refresh",
         "icon": "$(extensions-refresh)"
       }
     ],
     "configuration": {
       "title": "Size Extension",
       "properties": {
-        "size.fileNameFirst": {
+        "size.fileSizeLabel": {
           "type": "boolean",
           "default": true,
-          "description": "Show file name before size"
+          "description": "Show file size before file name"
         }
       }
     }
