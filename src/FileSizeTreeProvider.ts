@@ -30,9 +30,9 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
         const fileSizeLabel = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as Boolean;
 		if (fileSizeLabel) {
             item.label = bytesToHuman(item.size);
-			item.description = item.resourceUri!.path.split('/').pop() ?? '';
+			item.description = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder ? ` (${item.totalFileCount})` : '');
 		} else {
-			item.label = item.resourceUri!.path.split('/').pop() ?? '';
+			item.label = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder ? ` (${item.totalFileCount})` : '');
 			item.description = bytesToHuman(item.size);
 		}
         item.parent = parent;
@@ -64,7 +64,8 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 		});
         const children = (await Promise.all(childrenPromise)).filter((child) => child !== undefined) as FileSizeItem[];
 		const totalSize = children.reduce((acc, cur) => acc + cur.size, 0);
-		return new FileSizeItem(dirUri, children, totalSize, true);
+        const totalCount = children.reduce((acc, cur) => acc + (cur.folder ? cur.totalFileCount : 1), 0);
+		return new FileSizeItem(dirUri, children, totalSize, true, totalCount);
 	}
 
     getAllFiles(element: FileSizeItem): FileSizeItem[] {
@@ -117,13 +118,15 @@ class FileSizeItem extends vscode.TreeItem {
 	children: FileSizeItem[];
     parent?: FileSizeItem;
     folder: boolean;
+    totalFileCount: number;
 
-	constructor(itemUri: vscode.Uri, children?: FileSizeItem[], size?: number, isFolder = false) {
+	constructor(itemUri: vscode.Uri, children?: FileSizeItem[], size?: number, isFolder = false, fileCount = 1) {
 		super(itemUri, isFolder ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 		this.children = children ?? [];
 		this.children.sort((a, b) => b.size - a.size);
 		this.size = size ?? 0;
         this.folder = isFolder;
+        this.totalFileCount = fileCount;
 
 		if (!isFolder) {
 			this.command = {
