@@ -27,14 +27,14 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	
-
 	vscode.commands.executeCommand('setContext', 'size.fileView', false);
 
 	context.subscriptions.push(treeView);
 	context.subscriptions.push(refresh);
 	context.subscriptions.push(worspaceListener);
 	context.subscriptions.push(configListener);
+	context.subscriptions.push(modeFiles);
+	context.subscriptions.push(modeFolders);
 }
 
 export function deactivate() {}
