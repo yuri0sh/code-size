@@ -72,6 +72,11 @@
           "type": "boolean",
           "default": true,
           "description": "Show file size before file name"
+        },
+        "size.showFolderContentCount": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show number of files in folder (recursive)"
         }
       }
     }

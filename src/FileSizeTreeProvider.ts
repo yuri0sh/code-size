@@ -3,6 +3,10 @@ import { bytesToHuman } from './bytesToHuman';
 const fs = vscode.workspace.fs;
 
 export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSizeItem> {
+    constructor() {
+        this._updateConfig();
+    }
+
 	getTreeItem(element: FileSizeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
 		return element;
 	}
@@ -24,15 +28,16 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 
 	root?: FileSizeItem[];
     fileView: boolean = false;
+    fileSizeLabel: boolean = false;
+    showFolderContentCount: boolean = true;
 
 	// TODO: Move from recursion to dynamic programming
 	updateItem(item: FileSizeItem, parent?: FileSizeItem, recursive = false): FileSizeItem {
-        const fileSizeLabel = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as Boolean;
-		if (fileSizeLabel) {
+		if (this.fileSizeLabel) {
             item.label = bytesToHuman(item.size);
-			item.description = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder ? ` (${item.totalFileCount})` : '');
+			item.description = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder && this.showFolderContentCount ? ` (${item.totalFileCount})` : '');
 		} else {
-			item.label = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder ? ` (${item.totalFileCount})` : '');
+			item.label = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder && this.showFolderContentCount ? ` (${item.totalFileCount})` : '');
 			item.description = bytesToHuman(item.size);
 		}
         item.parent = parent;
@@ -104,7 +109,13 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 	private _onDidChangeTreeData: vscode.EventEmitter<FileSizeItem | undefined | null | void> = new vscode.EventEmitter<FileSizeItem | undefined | null | void>();
 	readonly onDidChangeTreeData: vscode.Event<FileSizeItem | undefined | null | void> = this._onDidChangeTreeData.event;
   
+    _updateConfig() {
+        this.fileSizeLabel = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as boolean;
+        this.showFolderContentCount = vscode.workspace.getConfiguration('size').get('showFolderContentCount') as boolean;
+    }
+
 	refresh(recalculateSize: boolean): void {
+        this._updateConfig();
 		if (recalculateSize) {
 			this.root = undefined;
 		}
