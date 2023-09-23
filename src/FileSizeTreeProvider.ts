@@ -7,7 +7,23 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 		return element;
 	}
 
+	getChildren(element?: FileSizeItem | undefined): vscode.ProviderResult<FileSizeItem[]> {
+		if (element === undefined) {
+			let root = this.getRoot();
+            if (this.fileView) {
+                return root.then((root) => 
+                    root.flatMap((item) => this.getAllFiles(item))
+                        .sort((a, b) => b.size - a.size)
+                );
+            }
+            return root;
+		}
+
+		return element!.children;
+	}
+
 	root?: FileSizeItem[];
+    fileView: boolean = false;
 
 	// TODO: Move from recursion to dynamic programming
 	updateItem(item: FileSizeItem, parent?: FileSizeItem, recursive = false): FileSizeItem {
@@ -48,33 +64,41 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 		});
         const children = (await Promise.all(childrenPromise)).filter((child) => child !== undefined) as FileSizeItem[];
 		const totalSize = children.reduce((acc, cur) => acc + cur.size, 0);
-		return new FileSizeItem(dirUri, children, totalSize);
+		return new FileSizeItem(dirUri, children, totalSize, true);
 	}
 
-	getChildren(element?: FileSizeItem | undefined): vscode.ProviderResult<FileSizeItem[]> {
+    getAllFiles(element: FileSizeItem): FileSizeItem[] {
+        if (element.folder) {
+            return element.children.reduce((acc, cur) => {
+                if (cur.folder) {
+                    return acc.concat(this.getAllFiles(cur));
+                } else {
+                    return acc.concat([cur]);
+                }
+            }, [] as FileSizeItem[]);
+        }
+        return [element];
+    }
 
-		if (!vscode.workspace.workspaceFolders) {
+    async getRoot(): Promise<FileSizeItem[]> {
+        if (!vscode.workspace.workspaceFolders) {
 			vscode.window.showInformationMessage('No files in empty workspace');
 			return Promise.resolve([]);
 		}
 
-		if (element === undefined) {
-			if (this.root) {
-				return this.root.map((item) => this.updateItem(item, undefined, true));
-			}
+        if (this.root) {
+            return this.root.map((item) => this.updateItem(item, undefined, true));
+        }
 
-			let res = Promise.all(vscode.workspace.workspaceFolders.map((folder) => this.getFileSizeItem(folder.uri)));
+        let res = Promise.all(vscode.workspace.workspaceFolders.map((folder) => this.getFileSizeItem(folder.uri)));
 
-			res.then((res) => {
-				this.root = res;
-                this.root.map((item) => this.updateItem(item, undefined, true));
-			});
+        res.then((res) => {
+            this.root = res;
+            this.root.map((item) => this.updateItem(item, undefined, true));
+        });
 
-			return res;
-		}
-
-		return element!.children;
-	}
+        return res;
+    }
 
 	private _onDidChangeTreeData: vscode.EventEmitter<FileSizeItem | undefined | null | void> = new vscode.EventEmitter<FileSizeItem | undefined | null | void>();
 	readonly onDidChangeTreeData: vscode.Event<FileSizeItem | undefined | null | void> = this._onDidChangeTreeData.event;
@@ -92,13 +116,14 @@ class FileSizeItem extends vscode.TreeItem {
 	size: number;
 	children: FileSizeItem[];
     parent?: FileSizeItem;
+    folder: boolean;
 
-	constructor(itemUri: vscode.Uri, children?: FileSizeItem[], size?: number) {
-		const isFolder = children?.length !== 0;
+	constructor(itemUri: vscode.Uri, children?: FileSizeItem[], size?: number, isFolder = false) {
 		super(itemUri, isFolder ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 		this.children = children ?? [];
 		this.children.sort((a, b) => b.size - a.size);
 		this.size = size ?? 0;
+        this.folder = isFolder;
 
 		if (!isFolder) {
 			this.command = {

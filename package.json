@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "File size for github.dev",
   "publisher": "yurish",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -32,6 +32,16 @@
           "command": "size.refreshTree",
           "when": "view == size.sizeTree",
           "group": "navigation@1"
+        },
+        {
+          "command": "size.modeFiles",
+          "group": "navigation@2",
+          "when": "view == size.sizeTree && !size.fileView"
+        },
+        {
+          "command": "size.modeFolders",
+          "group": "navigation@2",
+          "when": "view == size.sizeTree && size.fileView"
         }
       ] 
     },
@@ -41,6 +51,18 @@
         "title": "Size: Refresh",
         "shortTitle": "Refresh",
         "icon": "$(extensions-refresh)"
+      },
+      {
+        "command": "size.modeFiles",
+        "title": "Size: Show File List",
+        "shortTitle": "Show File List",
+        "icon": "$(explorer-view-icon)"
+      },
+      {
+        "command": "size.modeFolders",
+        "title": "Size: Show Folder Tree",
+        "shortTitle": "Show Folder Tree",
+        "icon": "$(folder-opened)"
       }
     ],
     "configuration": {
