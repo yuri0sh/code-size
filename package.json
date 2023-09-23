@@ -1,9 +1,9 @@
 {
   "name": "size",
-  "displayName": "size",
-  "description": "TODO: fill description; ",
+  "displayName": "Size",
+  "description": "File size for github.dev",
   "publisher": "yurish",
-  "version": "0.0.3",
+  "version": "0.0.6",
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -21,9 +21,36 @@
       "explorer": [
         {
           "id": "size.sizeTree",
-          "name": "Size"
+          "name": "Size",
+          "when": "workbenchState != empty"
         }
       ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "size.refreshTree",
+          "when": "view == size.sizeTree",
+          "group": "navigation@1"
+        }
+      ] 
+    },
+    "commands": [
+      {
+        "command": "size.refreshTree",
+        "title": "Refresh",
+        "icon": "$(extensions-refresh)"
+      }
+    ],
+    "configuration": {
+      "title": "Size Extension",
+      "properties": {
+        "size.fileNameFirst": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show file name before size"
+        }
+      }
     }
   },
   "scripts": {

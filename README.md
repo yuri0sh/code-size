@@ -1,8 +1,8 @@
 ![Display of file size](images/Screenshot%202023-09-23%20at%2011.19.37%20Small.png)
 
-Simple yet surprisingly useful extensions for VS Code, github and your overall quality of life and mental health. 
+A simple yet surprisingly useful extension for VS Code, github and your overall quality of life and mental well-being. 
 
-It is EXTREMELY helpful in analyzing unfamiliar repos. Forget "git clone".
+It is EXTREMELY helpful in analyzing unfamiliar repos. Forget "git clone". 
 
 ## Features
 
@@ -12,7 +12,9 @@ It can show file size.
 
 Works with remote repositories
 
-Works in github.dev and vscode.dev
+Works in github.dev and vscode.dev.
+
+Sorts by file size
 
 ## Known Issues
 

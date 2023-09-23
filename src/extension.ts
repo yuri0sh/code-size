@@ -1,17 +1,20 @@
 import * as vscode from 'vscode';
 import { bytesToHuman } from './bytesToHuman';
+import exp = require('constants');
 
 const fs = vscode.workspace.fs;
 
 // TODO: add .gitignore support
 async function getFileSizeItem(dirUri: vscode.Uri) {
 	const entries = await fs.readDirectory(dirUri);
+	console.log(entries);
 	const children = await Promise.all(entries.map(async ([name, type]) => {
 		if (type === vscode.FileType.File) {
-			const size = await getFileSize(vscode.Uri.joinPath(dirUri, name));
+			let size;
+			// TODO: handle errors
+			size = (await vscode.workspace.fs.stat(vscode.Uri.joinPath(dirUri, name))).size;
 			return new FileSizeItem(vscode.Uri.joinPath(dirUri, name), [], size);
 		} else if (type === vscode.FileType.Directory) {
-			const size = await getFolderSize(vscode.Uri.joinPath(dirUri, name));
 			return getFileSizeItem(vscode.Uri.joinPath(dirUri, name));
 		}
 	}));
@@ -38,6 +41,14 @@ class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSizeItem> 
 
 		return element!.children;
 	}
+
+	private _onDidChangeTreeData: vscode.EventEmitter<FileSizeItem | undefined | null | void> = new vscode.EventEmitter<FileSizeItem | undefined | null | void>();
+	readonly onDidChangeTreeData: vscode.Event<FileSizeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+  
+	refresh(): void {
+	  this._onDidChangeTreeData.fire();
+	}
+  
 }
 
 class FileSizeItem extends vscode.TreeItem {
@@ -50,8 +61,14 @@ class FileSizeItem extends vscode.TreeItem {
 		this.children = children ?? [];
 		this.children.sort((a, b) => b.size - a.size);
 		this.size = size ?? 0;
-		this.description = bytesToHuman(this.size);
-		this.label = itemUri.path.split('/').pop() ?? '';
+
+		const fileNameFirst = vscode.workspace.getConfiguration('size').get('fileNameFirst') as Boolean;
+		if (fileNameFirst) {
+			this.description = bytesToHuman(this.size);
+		} else {
+			this.label = bytesToHuman(this.size);
+			this.description = itemUri.path.split('/').pop() ?? '';
+		}
 
 		if (!isFolder) {
 			this.command = {
@@ -64,45 +81,30 @@ class FileSizeItem extends vscode.TreeItem {
 }
 
 function getFileSize(uri: vscode.Uri): Promise<number> {
-	return new Promise((resolve, reject) => {
-		vscode.workspace.fs.stat(uri!).then((res) => {
+	return new Promise(async (resolve, reject) => {
+		await vscode.workspace.fs.stat(uri!).then((res) => {
 			resolve(res.size);
 		});
 	});
 }
 
-function getFolderSize(uri: vscode.Uri): Promise<number> {
-	return new Promise((resolve, reject) => {
-		vscode.workspace.fs.readDirectory(uri!).then((entries) => {
-			let totalSize = 0;
-			let counted = 0;
-			for (const [name, type] of entries) {
-				if (type === vscode.FileType.File) {
-					getFileSize(vscode.Uri.joinPath(uri!, name)).then((res) => {
-						totalSize += res;
-						if (++counted === entries.length) {
-							resolve(totalSize);
-						}
-					});
-				} else if (type === vscode.FileType.Directory) {
-					getFolderSize(vscode.Uri.joinPath(uri!, name)).then((res) => {
-						totalSize += res;
-						if (++counted === entries.length) {
-							resolve(totalSize);
-						}
-					});
-				}
-			}
-		});
-	});
-}
-
-
 export function activate(context: vscode.ExtensionContext) {
 	const treeDataProvider = new FileSizeTreeDataProvider();
-	let disposable = vscode.window.registerTreeDataProvider('size.sizeTree', treeDataProvider);
 
-	context.subscriptions.push(disposable);
+	let treeView = vscode.window.createTreeView('size.sizeTree', { treeDataProvider });
+
+	let worspaceListener = vscode.workspace.onDidChangeWorkspaceFolders(treeDataProvider.refresh);
+	let refresh = vscode.commands.registerCommand('size.refreshTree', treeDataProvider.refresh);
+	let configListener = vscode.workspace.onDidChangeConfiguration((e) => {
+		if (e.affectsConfiguration('size')) {
+			treeDataProvider.refresh();
+		}
+	});
+
+	context.subscriptions.push(treeView);
+	context.subscriptions.push(refresh);
+	context.subscriptions.push(worspaceListener);
+	context.subscriptions.push(configListener);
 }
 
 export function deactivate() {}
