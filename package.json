@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "File size for github.dev",
   "publisher": "yurish",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -47,7 +47,7 @@
       "properties": {
         "size.fileNameFirst": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Show file name before size"
         }
       }

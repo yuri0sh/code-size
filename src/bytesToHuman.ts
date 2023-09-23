@@ -1,5 +1,9 @@
 export function bytesToHuman(bytes: number, si=true, dp=1) {
     const thresh = si ? 1000 : 1024;
+
+    if (bytes < 0) {
+        return 'error';
+    }
   
     if (Math.abs(bytes) < thresh) {
       return bytes + ' B';

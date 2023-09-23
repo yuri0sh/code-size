@@ -7,7 +7,6 @@ const fs = vscode.workspace.fs;
 // TODO: add .gitignore support
 async function getFileSizeItem(dirUri: vscode.Uri) {
 	const entries = await fs.readDirectory(dirUri);
-	console.log(entries);
 	const children = await Promise.all(entries.map(async ([name, type]) => {
 		if (type === vscode.FileType.File) {
 			let size;
@@ -93,8 +92,8 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let treeView = vscode.window.createTreeView('size.sizeTree', { treeDataProvider });
 
-	let worspaceListener = vscode.workspace.onDidChangeWorkspaceFolders(treeDataProvider.refresh);
-	let refresh = vscode.commands.registerCommand('size.refreshTree', treeDataProvider.refresh);
+	let worspaceListener = vscode.workspace.onDidChangeWorkspaceFolders( () => treeDataProvider.refresh());
+	let refresh = vscode.commands.registerCommand('size.refreshTree', () => treeDataProvider.refresh());
 	let configListener = vscode.workspace.onDidChangeConfiguration((e) => {
 		if (e.affectsConfiguration('size')) {
 			treeDataProvider.refresh();

@@ -2,19 +2,19 @@
 
 A simple yet surprisingly useful extension for VS Code, github and your overall quality of life and mental well-being. 
 
-It is EXTREMELY helpful in analyzing unfamiliar repos. Forget "git clone". 
+It is uniquely helpful at analyzing unfamiliar repos. Forget "git clone". 
 
 ## Features
 
-Shows file size. AND folder size.
+* Shows file size. AND folder size.
 
-It can show file size.
+* It can show file size.
 
-Works with remote repositories
+* Works with remote repositories
 
-Works in github.dev and vscode.dev.
+* Works in github.dev and vscode.dev.
 
-Sorts by file size
+* Sorts by file size
 
 ## Known Issues
 
