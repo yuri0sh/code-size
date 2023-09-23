@@ -2,6 +2,7 @@
   "name": "size",
   "displayName": "size",
   "description": "TODO: fill description; ",
+  "publisher": "yurish",
   "version": "0.0.3",
   "engines": {
     "vscode": "^1.82.0"
@@ -10,6 +11,10 @@
     "Other"
   ],
   "activationEvents": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuri0sh/code-size.git"
+  },
   "browser": "./dist/extension.js",
   "contributes": {
     "views": {
