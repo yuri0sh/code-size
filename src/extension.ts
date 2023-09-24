@@ -21,13 +21,33 @@ export function activate(context: vscode.ExtensionContext) {
 		treeDataProvider.refresh(false);
 	});
 
+	let enableGitihnoreCommand = vscode.commands.registerCommand('size.enableGitignore', () => {
+		// TODO: optimize so that gitignore doesnt refetch file sizes when enabled
+		vscode.commands.executeCommand('setContext', 'size.gitignoreEnabled', true);
+		treeDataProvider.handleGitignore = true;
+		treeDataProvider.refresh(true);
+	});
+
+	let disableGitihnoreCommand = vscode.commands.registerCommand('size.disableGitignore', () => {
+		vscode.commands.executeCommand('setContext', 'size.gitignoreEnabled', false);
+		treeDataProvider.handleGitignore = false;
+		treeDataProvider.refresh(true);
+	});
+
 	let configListener = vscode.workspace.onDidChangeConfiguration((e) => {
 		if (e.affectsConfiguration('size')) {
 			treeDataProvider.refresh(false);
 		}
 	});
 
+	let settingsCommand = vscode.commands.registerCommand('size.openSettings', () => {
+		vscode.commands.executeCommand('workbench.action.openSettings', '@ext:yurish.size');
+	});
+
 	vscode.commands.executeCommand('setContext', 'size.fileView', false);
+	vscode.commands.executeCommand('setContext', 'size.gitignoreEnabled', true);
+
+
 
 	context.subscriptions.push(treeView);
 	context.subscriptions.push(refresh);

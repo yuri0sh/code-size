@@ -1,6 +1,19 @@
 import * as vscode from 'vscode';
 import { bytesToHuman } from './bytesToHuman';
+import { Ignore } from 'ignore';
+import ignore from 'ignore';
+
 const fs = vscode.workspace.fs;
+
+async function readFoldersGitIgnore(folderUri: vscode.Uri) {
+	let gitIgnorePath = vscode.Uri.joinPath(folderUri, '.gitignore');
+	try {
+		let gitIgnore = await vscode.workspace.fs.readFile(gitIgnorePath);
+		return new TextDecoder().decode(gitIgnore);
+	} catch (e) {
+		return null;
+	}
+}
 
 export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSizeItem> {
     constructor() {
@@ -30,6 +43,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
     fileView: boolean = false;
     fileSizeLabel: boolean = false;
     showFolderContentCount: boolean = true;
+	handleGitignore: boolean = true;
 
 	// TODO: Move from recursion to dynamic programming
 	updateItem(item: FileSizeItem, parent?: FileSizeItem, recursive = false): FileSizeItem {
@@ -53,11 +67,15 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
         return element.parent;
     }
 
-	// TODO: add .gitignore support
 	async getFileSizeItem(dirUri: vscode.Uri) {
 		const entries = await fs.readDirectory(dirUri);
 		const childrenPromise = entries.map(async ([name, type]) => {
 			const uri = vscode.Uri.joinPath(dirUri, name);
+
+			// TODO: handle unignored files in ignored folders
+			if (this.gitignore?.ignores(uri.path.slice(this.gitignoreRoot))) {
+				return undefined;
+			}
 
 			if (type === vscode.FileType.File) {
 				let size = (await vscode.workspace.fs.stat(uri)).size;
@@ -86,6 +104,11 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
         return [element];
     }
 
+	gitignore?: Ignore;
+	gitignoreRoot: number = 0;
+
+	gitignores: Map<string, Ignore> = new Map();
+
     async getRoot(): Promise<FileSizeItem[]> {
         if (!vscode.workspace.workspaceFolders) {
 			vscode.window.showInformationMessage('No files in empty workspace');
@@ -95,6 +118,21 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
         if (this.root) {
             return this.root.map((item) => this.updateItem(item, undefined, true));
         }
+
+		this.gitignore = undefined;
+		if (this.handleGitignore) {
+			let gitIgnore = await readFoldersGitIgnore(vscode.workspace.workspaceFolders![0].uri);
+
+			if (gitIgnore !== null) {
+				this.gitignoreRoot = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, '.gitignore').fsPath.length - 10;
+				let ig = ignore().add(gitIgnore + '\n.git');
+				
+				//log to user 
+				vscode.window.showInformationMessage(`.gitignore found, ${gitIgnore.split('\n').length + 1} ignore rules`);
+
+				this.gitignore = ig;
+			}
+		}
 
         let res = Promise.all(vscode.workspace.workspaceFolders.map((folder) => this.getFileSizeItem(folder.uri)));
 
@@ -111,7 +149,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
   
     _updateConfig() {
         this.fileSizeLabel = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as boolean;
-        this.showFolderContentCount = vscode.workspace.getConfiguration('size').get('showFolderContentCount') as boolean;
+        this.showFolderContentCount = vscode.workspace.getConfiguration('size').get('folderContentCount') as boolean;
     }
 
 	refresh(recalculateSize: boolean): void {
@@ -138,6 +176,7 @@ class FileSizeItem extends vscode.TreeItem {
 		this.size = size ?? 0;
         this.folder = isFolder;
         this.totalFileCount = fileCount;
+		this.tooltip = `${itemUri.path} - ${this.size} bytes`;
         this.id = itemUri.path;
 
 		if (!isFolder) {
