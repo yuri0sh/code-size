@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "File size for github.dev",
   "publisher": "yurish",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "engines": {
     "vscode": "^1.82.0"
   },
@@ -27,6 +27,24 @@
       ]
     },
     "menus": {
+      "commandPalette": [
+        {
+          "command": "size.modeFiles",
+          "when": "!size.fileView"
+        },
+        {
+          "command": "size.modeFiles",
+          "when": "size.fileView"
+        },
+        {
+          "command": "size.enableGitignore",
+          "when": "!size.gitignoreEnabled"
+        },
+        {
+          "command": "size.disableGitignore",
+          "when": "size.gitignoreEnabled"
+        }
+      ],
       "view/title": [
         {
           "command": "size.refreshTree",
@@ -52,7 +70,8 @@
           "when": "view == size.sizeTree && size.gitignoreEnabled"
         },
         {
-          "command": "size.openSettings"
+          "command": "size.openSettings",
+          "when": "view == size.sizeTree"
         }
       ]
     },
@@ -113,7 +132,8 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
