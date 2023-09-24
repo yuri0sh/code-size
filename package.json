@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "File size for github.dev",
   "publisher": "yurish",
-  "version": "0.0.10",
+  "version": "0.0.12",
   "engines": {
     "vscode": "^1.82.0"
   },
