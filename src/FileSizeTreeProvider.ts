@@ -127,9 +127,6 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 				this.gitignoreRoot = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, '.gitignore').fsPath.length - 10;
 				let ig = ignore().add(gitIgnore + '\n.git');
 				
-				//log to user 
-				vscode.window.showInformationMessage(`.gitignore found, ${gitIgnore.split('\n').length + 1} ignore rules`);
-
 				this.gitignore = ig;
 			}
 		}
