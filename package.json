@@ -42,6 +42,17 @@
           "command": "size.modeFolders",
           "group": "navigation@2",
           "when": "view == size.sizeTree && size.fileView"
+        },
+        {
+          "command": "size.enableGitignore",
+          "when": "view == size.sizeTree && !size.gitignoreEnabled"
+        },
+        {
+          "command": "size.disableGitignore",
+          "when": "view == size.sizeTree && size.gitignoreEnabled"
+        },
+        {
+          "command": "size.openSettings"
         }
       ]
     },
@@ -63,6 +74,18 @@
         "title": "Size: Show Folder Tree",
         "shortTitle": "Show Folder Tree",
         "icon": "$(folder-opened)"
+      },
+      {
+        "command": "size.enableGitignore",
+        "title": "Enable .gitignore"
+      },
+      {
+        "command": "size.disableGitignore",
+        "title": "Disable .gitignore"
+      },
+      {
+        "command": "size.openSettings",
+        "title": "Settings"
       }
     ],
     "configuration": {
@@ -73,10 +96,10 @@
           "default": true,
           "description": "Show file size before file name"
         },
-        "size.showFolderContentCount": {
+        "size.folderContentCount": {
           "type": "boolean",
           "default": true,
-          "description": "Show number of files in folder (recursive)"
+          "description": "Show recursive file count for folders"
         }
       }
     }
