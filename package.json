@@ -1,13 +1,15 @@
 {
   "name": "size",
   "displayName": "Size",
-  "description": "File size for github.dev",
+  "description": "Project size explorer, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.0.13",
+  "version": "0.0.14",
+  "icon": "images/cat.png",
   "engines": {
     "vscode": "^1.82.0"
   },
   "categories": [
+    "Visualization",
     "Other"
   ],
   "activationEvents": [],
@@ -15,6 +17,16 @@
     "type": "git",
     "url": "https://github.com/yuri0sh/code-size.git"
   },
+  "keywords": [
+    "size",
+    "filesize",
+    "file size",
+    "folder size",
+    "project size",
+    "size explorer",
+    "size tree",
+    "size view"
+  ],
   "browser": "./dist/extension.js",
   "contributes": {
     "views": {
@@ -22,7 +34,9 @@
         {
           "id": "size.sizeTree",
           "name": "Size",
-          "when": "workbenchState != empty"
+          "when": "workbenchState != empty",
+          "contextualTitle": "Project Size",
+          "icon": "$(pie-chart)"
         }
       ]
     },
