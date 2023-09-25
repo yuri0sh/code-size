@@ -173,7 +173,7 @@ class FileSizeItem extends vscode.TreeItem {
 		this.size = size ?? 0;
         this.folder = isFolder;
         this.totalFileCount = fileCount;
-		this.tooltip = `${itemUri.path} - ${this.size} bytes`;
+		this.tooltip = `${itemUri.toString()} - ${this.size} bytes`;
         this.id = itemUri.path;
 
 		if (!isFolder) {
