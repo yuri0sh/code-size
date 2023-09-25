@@ -3,10 +3,10 @@
   "displayName": "Size",
   "description": "Project size explorer, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.0.14",
+  "version": "0.0.16",
   "icon": "images/cat.png",
   "engines": {
-    "vscode": "^1.82.0"
+    "vscode": "^1.70.0"
   },
   "categories": [
     "Visualization",
@@ -28,6 +28,7 @@
     "size view"
   ],
   "browser": "./dist/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "views": {
       "explorer": [

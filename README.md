@@ -1,29 +1,30 @@
-![Display of file size](images/Screenshot%202023-09-24%20at%2004.47.09%20Small.png)
+<img alt="Display of file size" src="images/b.png" width="260px" />
 
-A simple yet helpful practical extension for VS Code, github, your over health and mental well-being. 
+A simple yet astonishingly helpful extension for VS Code, GitHub and your overalls capabilities.   
+It is particularly useful when exploring little- and un-familiar projects. 
 
-It is particularly useful in analyzing new repos. Do "git clone" not.  
-Just open a repo in github.dev (press `.` in any github repository) and add this extension.
+## Usage
 
-Or connect to any virtual workspace with remote repositories. Chances are it will work just as well.
+Works in all classic scenarios. 
+
+What makes it unique is its compatibility with web editors and Remote Repositories.  
+The main goal was to be able to open any repo in [github.dev](https://github.dev) (hotkey: `.` on its GitHub page) and get a quick overview of the entire project.  
+
+This way you can get a heuristic of what the repository is all about without spending time going through the files manually or having to download it. <sub>should be a github feature tbh</sub>
 
 ## Features
 
-* Shows file size
+* Workspace file size tree / list
 
-* Shows folder size
-
-* It can show file size
+* Cumulative file count for folders
 
 * Works with __remote repositories__
 
-* Works in __github.dev__ and __vscode.dev__ (and other code™ editors)
-
-* Cumulative file count per folder
-
-* List/tree view toggle 
+* Works in __[github.dev](https://github.dev)__ and __[vscode.dev](https://github.dev)__ (and other code™ editors)
 
 * Experimental .gitignore support
+
+* In theory, supports any resource protocols provided by other extensions
 
 ## Settings
 
@@ -31,9 +32,14 @@ Or connect to any virtual workspace with remote repositories. Chances are it wil
 
 * `filesize.folderContentCount` - adds file cumulative count to folder names
 
-## Known Issues
+## Coming soon
 
-Breaks when run with `npx @vscode/test-web --extensionDevelopmentPath=. .` (applies to all self-hosted web editors?)
+Similar explorer for document symbols size (à la document outline view), but count lines instead
 
+Options to view and sort by file change rate, as reported by git log -- (inspired by [File Change Count](https://marketplace.visualstudio.com/items?itemName=sivakar12.file-change-count))
+
+## Known Issues 
+
+Breaks when run with `npx @vscode/test-web --extensionDevelopmentPath=. .` and file names contain spaces (vs code bug?)
 
 **Enjoy!**
