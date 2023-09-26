@@ -47,12 +47,23 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 
 	// TODO: Move from recursion to dynamic programming
 	updateItem(item: FileSizeItem, parent?: FileSizeItem, recursive = false): FileSizeItem {
+		let sizeString = bytesToHuman(item.size);
+		let titleString = (item.resourceUri!.path.split('/').pop() ?? '');
+
+		if (item.folder && this.showFolderContentCount) {
+			if (!parent) {
+				titleString += ` [${item.totalFileCount} files]`;
+			} else {
+				titleString += ` [${item.totalFileCount}]`;
+			}
+		}
+
 		if (this.fileSizeLabel) {
-            item.label = bytesToHuman(item.size);
-			item.description = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder && this.showFolderContentCount ? ` (${item.totalFileCount})` : '');
+            item.label = sizeString;
+			item.description = titleString;
 		} else {
-			item.label = (item.resourceUri!.path.split('/').pop() ?? '') + (item.folder && this.showFolderContentCount ? ` (${item.totalFileCount})` : '');
-			item.description = bytesToHuman(item.size);
+			item.label = titleString;
+			item.description = sizeString;
 		}
         item.parent = parent;
         
