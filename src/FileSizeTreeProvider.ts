@@ -1,7 +1,8 @@
-import * as vscode from 'vscode';
 import { bytesToHuman } from './bytesToHuman';
 import { Ignore } from 'ignore';
 import ignore from 'ignore';
+import * as vscode from 'vscode';
+import { GitHubFileSystemProvider, FileSystemProvider, VSCodeFileSystemProvider } from './FileSystemProviders';
 
 const fs = vscode.workspace.fs;
 
@@ -18,8 +19,15 @@ async function readFoldersGitIgnore(folderUri: vscode.Uri) {
 export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSizeItem> {
     constructor() {
         this._updateConfig();
+		this.fileSystemProviders = [
+			new GitHubFileSystemProvider([]),
+			new VSCodeFileSystemProvider()
+		];
     }
 
+	// fs providers, in order of priority
+	fileSystemProviders: FileSystemProvider[];
+	
 	getTreeItem(element: FileSizeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
 		return element;
 	}
@@ -27,7 +35,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 	getChildren(element?: FileSizeItem | undefined): vscode.ProviderResult<FileSizeItem[]> {
 		if (element === undefined) {
 			let root = this.getRoot();
-            if (this.fileView) {
+            if (this.fileViewConfig) {
                 return root.then((root) => 
                     root.flatMap((item) => this.getAllFiles(item))
                         .sort((a, b) => b.size - a.size)
@@ -40,17 +48,18 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 	}
 
 	root?: FileSizeItem[];
-    fileView: boolean = false;
-    fileSizeLabel: boolean = false;
-    showFolderContentCount: boolean = true;
-	handleGitignore: boolean = true;
+
+    fileViewConfig: boolean = false;
+    fileSizeLabelConfig: boolean = false;
+    showFolderContentCountConfig: boolean = true;
+	handleGitignoreConfig: boolean = true;
 
 	// TODO: Move from recursion to dynamic programming
 	updateItem(item: FileSizeItem, parent?: FileSizeItem, recursive = false): FileSizeItem {
 		let sizeString = bytesToHuman(item.size);
 		let titleString = (item.resourceUri!.path.split('/').pop() ?? '');
 
-		if (item.folder && this.showFolderContentCount) {
+		if (item.folder && this.showFolderContentCountConfig) {
 			if (!parent) {
 				titleString += ` [${item.totalFileCount} files]`;
 			} else {
@@ -58,7 +67,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 			}
 		}
 
-		if (this.fileSizeLabel) {
+		if (this.fileSizeLabelConfig) {
             item.label = sizeString;
 			item.description = titleString;
 		} else {
@@ -78,21 +87,42 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
         return element.parent;
     }
 
-	async getFileSizeItem(dirUri: vscode.Uri) {
-		const entries = await fs.readDirectory(dirUri);
-		const childrenPromise = entries.map(async ([name, type]) => {
-			const uri = vscode.Uri.joinPath(dirUri, name);
+	async getFileChildren(uri: vscode.Uri) {
+		for (let provider of this.fileSystemProviders) {
+			let option = await provider.getChildren(uri);
+			if (option) {
+				return option;
+			}
+		}
+		return undefined;
+	}
 
-			// TODO: handle unignored files in ignored folders
+	async getFileSizeItem(dirUri: vscode.Uri) {
+		const entries = await this.getFileChildren(dirUri);
+		if (entries === undefined) {
+			console.log("No file system provider found for " + dirUri.toString());
+			return;
+		}
+		const childrenPromise = entries!.map(async ({uri, isFolder}) => {
+			// // TODO: handle unignored files in ignored folders
 			if (this.gitignore?.ignores(uri.path.slice(this.gitignoreRoot))) {
 				return undefined;
 			}
 
-			if (type === vscode.FileType.File) {
-				let size = (await vscode.workspace.fs.stat(uri)).size;
-				return new FileSizeItem(vscode.Uri.joinPath(dirUri, name), [], size);
-			} else if (type === vscode.FileType.Directory) {
-				return this.getFileSizeItem(vscode.Uri.joinPath(dirUri, name));
+			if (!isFolder) {
+				let size;
+				for (let provider of this.fileSystemProviders) {
+					size = await provider.getSize(uri);
+					if (size !== undefined) {
+						break;
+					}
+				}
+				if (size === undefined) {
+					size = -1;
+				}
+				return new FileSizeItem(uri, [], size);
+			} else if (isFolder) {
+				return this.getFileSizeItem(uri);
 			}
             // TODO: handle symlinks
 		});
@@ -126,12 +156,14 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 			return Promise.resolve([]);
 		}
 
-        if (this.root) {
-            return this.root.map((item) => this.updateItem(item, undefined, true));
-        }
+		for (let provider of this.fileSystemProviders) {
+			for (let folder of vscode.workspace.workspaceFolders) {
+				await provider.init(folder.uri);
+			}
+		}
 
-		this.gitignore = undefined;
-		if (this.handleGitignore) {
+		// TODO: Support for multi root workspaces
+		if (this.handleGitignoreConfig && !this.gitignore) {
 			let gitIgnore = await readFoldersGitIgnore(vscode.workspace.workspaceFolders![0].uri);
 
 			if (gitIgnore !== null) {
@@ -142,32 +174,32 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 			}
 		}
 
-        let res = Promise.all(vscode.workspace.workspaceFolders.map((folder) => this.getFileSizeItem(folder.uri)));
+        let res = await Promise.all(vscode.workspace.workspaceFolders.map(async (folder) => {
+			return this.getFileSizeItem(folder.uri);
+		}));
 
-        res.then((res) => {
-            this.root = res;
-            this.root.map((item) => this.updateItem(item, undefined, true));
-        });
+		this.root = res.filter(el => el) as FileSizeItem[];
+		this.root.map((item) => this.updateItem(item, undefined, true));
 
-        return res;
+        return this.root;
     }
 
 	private _onDidChangeTreeData: vscode.EventEmitter<FileSizeItem | undefined | null | void> = new vscode.EventEmitter<FileSizeItem | undefined | null | void>();
 	readonly onDidChangeTreeData: vscode.Event<FileSizeItem | undefined | null | void> = this._onDidChangeTreeData.event;
   
     _updateConfig() {
-        this.fileSizeLabel = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as boolean;
-        this.showFolderContentCount = vscode.workspace.getConfiguration('size').get('folderContentCount') as boolean;
+        this.fileSizeLabelConfig = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as boolean;
+        this.showFolderContentCountConfig = vscode.workspace.getConfiguration('size').get('folderContentCount') as boolean;
     }
 
 	refresh(recalculateSize: boolean): void {
         this._updateConfig();
 		if (recalculateSize) {
-			this.root = undefined;
+			this.gitignore = undefined;
+			this.fileSystemProviders.forEach((provider) => provider.update());
 		}
 	  	this._onDidChangeTreeData.fire();
 	}
-  
 }
 
 class FileSizeItem extends vscode.TreeItem {

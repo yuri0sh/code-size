@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { FileSizeTreeDataProvider } from './FileSizeTreeProvider';
 
+// TODO: add optional file type grouping
 export function activate(context: vscode.ExtensionContext) {
 	const treeDataProvider = new FileSizeTreeDataProvider();
 
@@ -11,7 +12,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	let modeFiles = vscode.commands.registerCommand('size.modeFiles', () => {
 		vscode.commands.executeCommand('setContext', 'size.fileView', true);
-		treeDataProvider.fileView = true;
+		treeDataProvider.fileViewConfig = true;
 		treeDataProvider.refresh(false);
 	});
 
@@ -24,13 +25,13 @@ export function activate(context: vscode.ExtensionContext) {
 	let enableGitihnoreCommand = vscode.commands.registerCommand('size.enableGitignore', () => {
 		// TODO: optimize so that gitignore doesnt refetch file sizes when enabled
 		vscode.commands.executeCommand('setContext', 'size.gitignoreEnabled', true);
-		treeDataProvider.handleGitignore = true;
+		treeDataProvider.handleGitignoreConfig = true;
 		treeDataProvider.refresh(true);
 	});
 
 	let disableGitihnoreCommand = vscode.commands.registerCommand('size.disableGitignore', () => {
 		vscode.commands.executeCommand('setContext', 'size.gitignoreEnabled', false);
-		treeDataProvider.handleGitignore = false;
+		treeDataProvider.handleGitignoreConfig = false;
 		treeDataProvider.refresh(true);
 	});
 

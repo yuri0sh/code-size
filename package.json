@@ -1,9 +1,9 @@
 {
   "name": "size",
   "displayName": "Size",
-  "description": "Project size explorer, github.dev compatible",
+  "description": "Project size tree, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.0.16",
+  "version": "0.1.2",
   "icon": "images/cat.png",
   "engines": {
     "vscode": "^1.70.0"
@@ -27,7 +27,7 @@
     "size tree",
     "size view"
   ],
-  "browser": "./dist/extension.js",
+  "browser": "./dist/web.js",
   "main": "./dist/extension.js",
   "contributes": {
     "views": {
@@ -153,7 +153,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.1",
     "@types/node": "16.x",
-    "@types/vscode": "^1.82.0",
+    "@types/vscode": "^1.70.0",
     "@typescript-eslint/eslint-plugin": "^6.4.1",
     "@typescript-eslint/parser": "^6.4.1",
     "@vscode/test-electron": "^2.3.4",
@@ -166,6 +166,7 @@
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
+    "axios": "^1.5.1",
     "ignore": "^5.2.4"
   }
 }
