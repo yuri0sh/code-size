@@ -96,18 +96,34 @@ export class GitHubFileSystemProvider implements FileSystemProvider {
 	}
 
 	async fetchRepoOf(uri: vscode.Uri) {
-		let oid = uri.authority.split(/(\+|%2B)/)[2];
+		let meta: any = uri.authority.split(/(\+|%2B)/)[2];
+		meta = JSON.parse(hex2utf8(meta));
         let owner = uri.path.split('/')[1];
         let name = uri.path.split('/')[2];
         let laxios = axios.create({ baseURL: "https://api.github.com" });
+		let oid;
 
 		uri = uri.with({path: `/${owner}/${name}`});
 
-        if (!oid) {
+        if (!meta) {
             let branch = (await laxios.get(`/repos/${owner}/${name}`)).data.default_branch;
 			this.defaultBranches[owner + '/' + name] = branch;
             oid = (await laxios.get(`/repos/${owner}/${name}/git/refs/heads/${branch}`)).data.object.sha;
-        }
+        } else if (meta.ref?.type === 2) {
+			oid = meta.ref.id;
+		} else if (meta.ref?.type === 3) {
+			oid = (await laxios.get(`/repos/${owner}/${name}/git/pulls/${meta.ref.id}`)).data.head.sha;
+		} else if (meta.ref?.type === 4) {
+            oid = (await laxios.get(`/repos/${owner}/${name}/git/ref/heads/${meta.ref.id}`, {
+				validateStatus: () => true
+			}))?.data?.object?.sha;
+			if (!oid) {
+				oid = (await laxios.get(`/repos/${owner}/${name}/git/ref/tags/${meta.ref.id}`))?.data?.object?.sha;
+			}
+		} else {
+			console.error("Size Extension: Couldn't determine ref for " + owner + '/' + name + ". Fallback to vscode API.");
+			return;
+		}
         let response = await laxios.get(`/repos/${owner}/${name}/git/trees/${oid}?recursive=1`);
         let trees = response.data.tree as GitObject[];
 
@@ -184,4 +200,8 @@ export class GitHubFileSystemProvider implements FileSystemProvider {
 	update(): void {
 		this.cache = new Map();
 	}
+}
+
+function hex2utf8(hexx: string) {
+    return decodeURIComponent(hexx.replace(/\s+/g, '').replace(/[0-9a-f]{2}/g, '%$&'));
 }

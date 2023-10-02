@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "Project size tree, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "icon": "images/cat.png",
   "engines": {
     "vscode": "^1.70.0"
