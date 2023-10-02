@@ -96,7 +96,7 @@ export class GitHubFileSystemProvider implements FileSystemProvider {
 	}
 
 	async fetchRepoOf(uri: vscode.Uri) {
-		let oid = uri.authority.split(/(\+|%20)/)[1];
+		let oid = uri.authority.split(/(\+|%2B)/)[2];
         let owner = uri.path.split('/')[1];
         let name = uri.path.split('/')[2];
         let laxios = axios.create({ baseURL: "https://api.github.com" });
