@@ -3,8 +3,8 @@ import { Ignore } from 'ignore';
 import ignore from 'ignore';
 import * as vscode from 'vscode';
 import { GitHubFileSystemProvider, FileSystemProvider, VSCodeFileSystemProvider } from './FileSystemProviders';
-
-const fs = vscode.workspace.fs;
+import { ProviderResult } from './git-types/git';
+import { IgnorePattern, IgnoreRegex, IgnoreFile, IgnoreExtension } from './IgnorePattern';
 
 async function readFoldersGitIgnore(folderUri: vscode.Uri) {
 	let gitIgnorePath = vscode.Uri.joinPath(folderUri, '.gitignore');
@@ -16,7 +16,41 @@ async function readFoldersGitIgnore(folderUri: vscode.Uri) {
 	}
 }
 
-export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSizeItem> {
+type BranchType = 'folder' | 'extension' | 'file';
+
+function ignorePatternToTreeItem(pattern: IgnorePattern) {
+	const item: vscode.TreeItem | any = {
+		label: "Unknown Pattern",
+		pattern: pattern,
+		contextValue: 'ignoreItem'
+	};
+
+	if (pattern instanceof IgnoreRegex) {
+		item.label = pattern.regex.toString();
+		item.regex = pattern.regex;
+		item.iconPath = new vscode.ThemeIcon('regex');
+		item.description = 'Regex';
+	} else if (pattern instanceof IgnoreFile) {
+		item.label = pattern.uri.path.split('/').pop() ?? '';
+		item.description = pattern.folder ? "Folder" : "File";
+		item.resourceUri = pattern.uri;
+		item.collapsible = false;
+		item.iconPath = pattern.folder ? new vscode.ThemeIcon('folder-opened') : vscode.ThemeIcon.File;
+	} else if (pattern instanceof IgnoreExtension) {
+		item.label = pattern.extension;
+		item.iconPath = vscode.ThemeIcon.File;
+		item.description = 'Extension';
+	}
+
+	return item;
+}
+
+export { IgnoreFile, IgnoreRegex, IgnoreExtension };
+
+export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
+	ignorePatterns: IgnorePattern[] = [];
+	displayFoldersFirst: boolean = false;
+
     constructor() {
         this._updateConfig();
 		this.fileSystemProviders = [
@@ -25,71 +59,135 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 		];
     }
 
+	ignorePatternToTreeItem = ignorePatternToTreeItem;
+
 	// fs providers, in order of priority
 	fileSystemProviders: FileSystemProvider[];
+
+	filterPass: boolean = false;
 	
-	getTreeItem(element: FileSizeItem): vscode.TreeItem | Thenable<vscode.TreeItem> {
-		return element;
+	getTreeItem(item: any): vscode.TreeItem | Thenable<vscode.TreeItem> {
+
+		if (item.contextValue === 'ignoreRoot') {
+			item.label = this.filterPass ? 'Whitelist' : 'Filter';
+			// item.description = `${this.ignorePatterns.length} ${this.filterPass ? 'include' : 'exclude'} patterns`;
+			item.description = `[${this.ignorePatterns.length} patterns]`;
+			item.id = 'ignoreRoot';
+			item.iconPath = this.filterPass ? new vscode.ThemeIcon('pass', new vscode.ThemeColor('foreground')) : new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('errorForeground'));
+
+			return item;
+		}
+
+		if (item.contextValue === 'ignoreItem') {
+			return item as FileSizeTreeItem;
+		} 
+
+		if (item.contextValue === 'fsRoot' || item.contextValue === 'extRoot' || !item.contextValue) {
+			const parent = item.parent;
+			let sizeString = bytesToHuman(item.size);
+
+			let titleString = (item.resourceUri!.path.split('/').pop() ?? '');
+			if (parent && item.folder) {
+				titleString = item.resourceUri!.path.slice(parent.resourceUri!.path.length + 1).replace(/\//g, ' / ');
+			}
+
+			if (item.folder && this.showFolderContentCountConfig) {
+				if (!parent) {
+					titleString += ` [${item.totalFileCount} files]`;
+				} else {
+					titleString += ` [${item.totalFileCount}]`;
+				}
+			}
+
+			if (this.fileSizeLabelConfig) {
+				item.label = sizeString;
+				item.description = titleString;
+			} else {
+				item.label = titleString;
+				item.description = sizeString;
+			}
+
+			return item;
+		}
+
+		return item;
 	}
 
-	getChildren(element?: FileSizeItem | undefined): vscode.ProviderResult<FileSizeItem[]> {
+	// async buildTree(root, branchBy) {
+
+	// }
+
+	getChildren(element?: FileSizeTreeItem | undefined): ProviderResult<any[]> {
 		if (element === undefined) {
 			let root = this.getRoot();
-            if (this.fileViewConfig) {
-                return root.then((root) => 
+            if (this.branchBy === 'file') {
+                root = root.then((root) => 
                     root.flatMap((item) => this.getAllFiles(item))
                         .sort((a, b) => b.size - a.size)
                 );
             }
+			
+			if (this.branchBy === 'extension') {
+				root = root.then((root) => {
+					let exts = new Map<string, FileSizeTreeItem>();
+					root.flatMap((item) => this.getAllFiles(item)).forEach((item) => {
+						if (!item.folder) {
+							let filename = item.resourceUri?.path.split('/').pop();
+							let ext = filename?.includes('.') ? '.' + filename?.split('.').pop() : filename;
+							if (ext) {
+								if (exts.has(ext)) {
+									exts.get(ext)!.size += item.size;
+									exts.get(ext)!.totalFileCount += 1;
+									exts.get(ext)!.children.push(item);
+								} else {
+									let group = new FileSizeTreeItem(vscode.Uri.parse(ext), [item], item.size, true, 1, 1, 'extRoot');
+									group.iconPath = vscode.ThemeIcon.File;
+									exts.set(ext, group);
+								}
+							}
+						}
+					});
+					let children = Array.from(exts.values());
+					children.sort((a, b) => b.size - a.size);
+					children.forEach((item) => {
+						item.children.sort((a, b) => b.size - a.size);
+					});
+					return children;
+				});
+			}
+			root.then((root) => {
+				if (this.ignorePatterns.length > 0 || this.filterPass) {
+					root.splice(0, 0, {
+						children: this.ignorePatterns.map(ignorePatternToTreeItem),
+						collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+						contextValue: 'ignoreRoot',
+						ignoreRoot: true
+					});
+				}
+			});
             return root;
 		}
 
 		return element!.children;
 	}
 
-	root?: FileSizeItem[];
+	root?: any[];
 
-    fileViewConfig: boolean = false;
+	branchBy: BranchType =  vscode.workspace.getConfiguration('size').get('defaultTreeType') ?? 'folder';
+
     fileSizeLabelConfig: boolean = false;
     showFolderContentCountConfig: boolean = true;
 	handleGitignoreConfig: boolean = true;
+	compactFoldersConfig: boolean = true;
 
-	// TODO: Move from recursion to dynamic programming
-	updateItem(item: FileSizeItem, parent?: FileSizeItem, recursive = false): FileSizeItem {
-		let sizeString = bytesToHuman(item.size);
-		let titleString = (item.resourceUri!.path.split('/').pop() ?? '');
 
-		if (item.folder && this.showFolderContentCountConfig) {
-			if (!parent) {
-				titleString += ` [${item.totalFileCount} files]`;
-			} else {
-				titleString += ` [${item.totalFileCount}]`;
-			}
-		}
-
-		if (this.fileSizeLabelConfig) {
-            item.label = sizeString;
-			item.description = titleString;
-		} else {
-			item.label = titleString;
-			item.description = sizeString;
-		}
-        item.parent = parent;
-        
-        
-        if (recursive) {
-            item.children.forEach(child => this.updateItem(child, item, true));
-        }
-		return item;
-	}
-
-    getParent(element: FileSizeItem): vscode.ProviderResult<FileSizeItem> {
+    getParent(element: FileSizeTreeItem): vscode.ProviderResult<FileSizeTreeItem> {
         return element.parent;
     }
 
-	async getFileChildren(uri: vscode.Uri) {
+	getFileChildren(uri: vscode.Uri) {
 		for (let provider of this.fileSystemProviders) {
-			let option = await provider.getChildren(uri);
+			let option = provider.getChildren(uri);
 			if (option) {
 				return option;
 			}
@@ -97,42 +195,107 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 		return undefined;
 	}
 
+	async fetchFileChildren(uri: vscode.Uri) {
+		for (let provider of this.fileSystemProviders) {
+			await provider.fetch(uri);
+			let option = provider.getChildren(uri);
+			if (option) {
+				return option;
+			}
+		}
+		return undefined;
+	}
+
+	getFileSize(uri: vscode.Uri) {
+		for (let provider of this.fileSystemProviders) {
+			let option = provider.getSize(uri);
+			if (option !== undefined) {
+				return option;
+			}
+		}
+		return undefined;
+	}
+
+	async fetchFileSize(uri: vscode.Uri) {
+		for (let provider of this.fileSystemProviders) {
+			await provider.fetchSize(uri);
+			let option = provider.getSize(uri);
+			if (option !== undefined) {
+				return option;
+			}
+		}
+		return undefined;
+	}
+
 	async getFileSizeItem(dirUri: vscode.Uri) {
-		const entries = await this.getFileChildren(dirUri);
+		let entries: {uri: vscode.Uri, isFolder: boolean, filtered?: boolean}[] | undefined = this.getFileChildren(dirUri);
+		if (entries === undefined) {
+			entries = await this.fetchFileChildren(dirUri);
+		}
 		if (entries === undefined) {
 			console.log("No file system provider found for " + dirUri.toString());
 			return;
 		}
-		const childrenPromise = entries!.map(async ({uri, isFolder}) => {
-			// // TODO: handle unignored files in ignored folders
-			if (this.gitignore?.ignores(uri.path.slice(this.gitignoreRoot))) {
-				return undefined;
-			}
 
-			if (!isFolder) {
-				let size;
-				for (let provider of this.fileSystemProviders) {
-					size = await provider.getSize(uri);
-					if (size !== undefined) {
-						break;
-					}
-				}
-				if (size === undefined) {
-					size = -1;
-				}
-				return new FileSizeItem(uri, [], size);
-			} else if (isFolder) {
-				return this.getFileSizeItem(uri);
+		entries = entries.filter((el) => el !== undefined);
+		entries = entries.filter((el) => {
+			if (this.gitignore?.ignores((el.uri.path + (el.isFolder ? "/" : "")).slice(this.gitignoreRoot))) {
+				return false;
 			}
-            // TODO: handle symlinks
+			return true;
 		});
-        const children = (await Promise.all(childrenPromise)).filter((child) => child !== undefined) as FileSizeItem[];
+
+		entries.forEach((el) => {
+			let key = el.uri.toString();
+
+			let filtered = this.ignorePatterns.some((pattern) => pattern.matchString(key));
+			el.filtered = this.filterPass ? !filtered : filtered;
+		});
+
+		let folders = entries.filter((el) => el.isFolder);
+		let files = entries.filter((el) => !el.isFolder && !el.filtered);
+
+		let fileItems = [];
+		for (let file of files) {
+			let size = this.getFileSize(file.uri);
+			if (size === undefined) {
+				size = await this.fetchFileSize(file.uri);
+			}
+			if (size === undefined) {
+				console.log("No file size found for " + file.uri.toString());
+				return;
+			}
+			fileItems.push(new FileSizeTreeItem(file.uri, [], size, false, 1, 1));
+		}
+
+		let folderItems = [];
+		for (let folder of folders) {
+			let folderItem: FileSizeTreeItem | undefined = await this.getFileSizeItem(folder.uri);
+			if (folderItem === undefined || folder.filtered && folderItem.children.length === 0) {
+				continue;
+			}
+			if (this.compactFoldersConfig) {
+				if (folderItem.children.length === 1 && folderItem.children[0].folder) {
+					folderItems.push(folderItem.children[0]);
+					continue;
+				}
+			}
+			if (folderItem !== undefined && (folderItem.children.length > 0 || !folder.filtered)) {
+				folderItems.push(folderItem);
+			}
+		}
+
+		let children: FileSizeTreeItem[] = [...folderItems, ...fileItems];
 		const totalSize = children.reduce((acc, cur) => acc + cur.size, 0);
         const totalCount = children.reduce((acc, cur) => acc + (cur.folder ? cur.totalFileCount : 1), 0);
-		return new FileSizeItem(dirUri, children, totalSize, true, totalCount);
+		// const total
+		return new FileSizeTreeItem(dirUri, children, totalSize, true, totalCount, 0);
 	}
 
-    getAllFiles(element: FileSizeItem): FileSizeItem[] {
+    getAllFiles(element: FileSizeTreeItem): FileSizeTreeItem[] {
+		if (element.contextValue && element.contextValue !== 'fsRoot') {
+			return [];
+		}
         if (element.folder) {
             return element.children.reduce((acc, cur) => {
                 if (cur.folder) {
@@ -140,7 +303,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
                 } else {
                     return acc.concat([cur]);
                 }
-            }, [] as FileSizeItem[]);
+            }, [] as FileSizeTreeItem[]);
         }
         return [element];
     }
@@ -150,16 +313,10 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 
 	gitignores: Map<string, Ignore> = new Map();
 
-    async getRoot(): Promise<FileSizeItem[]> {
-        if (!vscode.workspace.workspaceFolders) {
-			vscode.window.showInformationMessage('No files in empty workspace');
+    async getRoot(): Promise<any[]> {
+		if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+			console.error('Size Extension: No workspace folders found.');
 			return Promise.resolve([]);
-		}
-
-		for (let provider of this.fileSystemProviders) {
-			for (let folder of vscode.workspace.workspaceFolders) {
-				await provider.init(folder.uri);
-			}
 		}
 
 		// TODO: Support for multi root workspaces
@@ -178,18 +335,22 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 			return this.getFileSizeItem(folder.uri);
 		}));
 
-		this.root = res.filter(el => el) as FileSizeItem[];
-		this.root.map((item) => this.updateItem(item, undefined, true));
+		this.root = res.filter(el => el) as FileSizeTreeItem[];
+		this.root.forEach((item) => {
+			item.contextValue = 'fsRoot';
+		});
 
         return this.root;
     }
 
-	private _onDidChangeTreeData: vscode.EventEmitter<FileSizeItem | undefined | null | void> = new vscode.EventEmitter<FileSizeItem | undefined | null | void>();
-	readonly onDidChangeTreeData: vscode.Event<FileSizeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+	private _onDidChangeTreeData: vscode.EventEmitter<FileSizeTreeItem | undefined | null | void> = new vscode.EventEmitter<FileSizeTreeItem | undefined | null | void>();
+	readonly onDidChangeTreeData: vscode.Event<FileSizeTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
   
     _updateConfig() {
         this.fileSizeLabelConfig = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as boolean;
         this.showFolderContentCountConfig = vscode.workspace.getConfiguration('size').get('folderContentCount') as boolean;
+		this.compactFoldersConfig = vscode.workspace.getConfiguration('size').get('compactFolders') as boolean;
+		this.displayFoldersFirst = vscode.workspace.getConfiguration('size').get('foldersFirst') as boolean;
     }
 
 	refresh(recalculateSize: boolean): void {
@@ -200,24 +361,58 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<FileSiz
 		}
 	  	this._onDidChangeTreeData.fire();
 	}
+
+	addIgnorePattern(pattern: IgnorePattern) {
+		if (pattern.id && this.ignorePatterns.some(el => el.id === pattern.id)) {return;}
+		this.ignorePatterns.push(pattern);
+		this.refresh(false);
+	}
+
+	removeIgnorePattern(pattern: IgnorePattern) {
+		this.ignorePatterns = this.ignorePatterns.filter((el) => el !== pattern);
+		if (this.ignorePatterns.length === 0) {
+			this.setFilterPass(false);
+		}
+		this.refresh(false);
+	}
+
+	resetIgnorePatterns() {
+		this.ignorePatterns = [];
+		this.setFilterPass(false);
+		this.refresh(false);
+	}
+
+	setFilterPass(filterPass: boolean) {
+		this.filterPass = filterPass;
+		this.refresh(false);
+	}
 }
 
-class FileSizeItem extends vscode.TreeItem {
+function buildFileSizeTreeItem(itemUri: vscode.Uri, provider: FileSizeTreeDataProvider): FileSizeTreeItem {
+	return new FileSizeTreeItem(itemUri, [], 0, true, 0, 0, 'fsRoot');
+}
+
+export class FileSizeTreeItem extends vscode.TreeItem {
 	size: number;
-	children: FileSizeItem[];
-    parent?: FileSizeItem;
+	children: FileSizeTreeItem[];
+    parent?: FileSizeTreeItem;
     folder: boolean;
     totalFileCount: number;
 
-	constructor(itemUri: vscode.Uri, children?: FileSizeItem[], size?: number, isFolder = false, fileCount = 1) {
+	constructor(itemUri: vscode.Uri, children: FileSizeTreeItem[], size: number = 0, isFolder = false, fileCount = 1, unfilteredFileCount = 1, contextValue?: string) {
 		super(itemUri, isFolder ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-		this.children = children ?? [];
+		this.children = children;
 		this.children.sort((a, b) => b.size - a.size);
-		this.size = size ?? 0;
+		this.children.forEach((item) => item.parent = this);
+		this.size = size;
         this.folder = isFolder;
         this.totalFileCount = fileCount;
-		this.tooltip = `${itemUri.toString()} - ${this.size} bytes`;
+		this.tooltip = `${itemUri.toString()} (${this.size} bytes)`;
         this.id = itemUri.path;
+
+		if (contextValue) {
+			this.contextValue = contextValue;
+		};
 
 		if (!isFolder) {
 			this.command = {

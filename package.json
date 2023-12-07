@@ -1,9 +1,9 @@
 {
   "name": "size",
   "displayName": "Size",
-  "description": "Project size tree, github.dev compatible",
+  "description": "Folder size tree, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.1.4",
+  "version": "0.2.3",
   "icon": "images/cat.png",
   "engines": {
     "vscode": "^1.70.0"
@@ -12,6 +12,14 @@
     "Visualization",
     "Other"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": {
+      "supported": true
+    }
+  },
   "activationEvents": [],
   "repository": {
     "type": "git",
@@ -41,16 +49,14 @@
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "sizeExplorerTreeTypeSubmenu",
+        "label": "View As"
+      }
+    ],
     "menus": {
       "commandPalette": [
-        {
-          "command": "size.modeFiles",
-          "when": "!size.fileView"
-        },
-        {
-          "command": "size.modeFiles",
-          "when": "size.fileView"
-        },
         {
           "command": "size.enableGitignore",
           "when": "!size.gitignoreEnabled"
@@ -58,6 +64,20 @@
         {
           "command": "size.disableGitignore",
           "when": "size.gitignoreEnabled"
+        },
+        {
+          "command": "size.includePath"
+        }
+      ],
+      "sizeExplorerTreeTypeSubmenu": [
+        {
+          "command": "size.modeFiles"
+        },
+        {
+          "command": "size.modeFolders"
+        },
+        {
+          "command": "size.modeExtensions"
         }
       ],
       "view/title": [
@@ -69,62 +89,139 @@
         {
           "command": "size.modeFiles",
           "group": "navigation@2",
-          "when": "view == size.sizeTree && !size.fileView"
+          "when": "view == size.sizeTree && size.treeType == 'extension'"
         },
         {
           "command": "size.modeFolders",
           "group": "navigation@2",
-          "when": "view == size.sizeTree && size.fileView"
+          "when": "view == size.sizeTree && size.treeType == 'file'"
+        },
+        {
+          "command": "size.modeExtensions",
+          "group": "navigation@2",
+          "when": "view == size.sizeTree && size.treeType == 'folder'"
+        },
+        {
+          "submenu": "sizeExplorerTreeTypeSubmenu",
+          "when": "view == size.sizeTree",
+          "group": "2_options@2"
+        },
+        {
+          "command": "size.ignorePath",
+          "when": "view == size.sizeTree",
+          "group": "2_options@1"
         },
         {
           "command": "size.enableGitignore",
-          "when": "view == size.sizeTree && !size.gitignoreEnabled"
+          "when": "view == size.sizeTree && !size.gitignoreEnabled",
+          "group": "3_settings@1"
         },
         {
           "command": "size.disableGitignore",
-          "when": "view == size.sizeTree && size.gitignoreEnabled"
+          "when": "view == size.sizeTree && size.gitignoreEnabled",
+          "group": "3_settings@1"
         },
         {
           "command": "size.openSettings",
-          "when": "view == size.sizeTree"
+          "when": "view == size.sizeTree",
+          "group": "3_settings"
+        }
+      ],      
+      "view/item/context": [
+        {
+          "command": "size.toggleFilterMode",
+          "when": "viewItem == ignoreRoot",
+          "group": "inline"
+        },
+        {
+          "command": "size.ignorePath",
+          "when": "view == size.sizeTree && (!viewItem || viewItem == extRoot)",
+          "group": "inline"
+        },
+        {
+          "command": "size.includePath",
+          "when": "view == size.sizeTree && (viewItem == ignoreRoot || viewItem == ignoreItem)",
+          "group": "inline"
         }
       ]
     },
     "commands": [
       {
         "command": "size.refreshTree",
-        "title": "Size: Refresh",
-        "shortTitle": "Refresh",
+        "title": "Refresh",
+        "category": "Size",
         "icon": "$(extensions-refresh)"
       },
       {
         "command": "size.modeFiles",
-        "title": "Size: Show File List",
-        "shortTitle": "Show File List",
+        "title": "View As File List",
+        "shortTitle": "Files",
+        "category": "Size",
         "icon": "$(explorer-view-icon)"
       },
       {
         "command": "size.modeFolders",
-        "title": "Size: Show Folder Tree",
-        "shortTitle": "Show Folder Tree",
+        "title": "View As Folder Tree",
+        "shortTitle": "Folder Tree",
+        "category": "Size",
         "icon": "$(folder-opened)"
       },
       {
+        "command": "size.modeExtensions",
+        "title": "View As File Type Groups",
+        "shortTitle": "Extension Groups",
+        "category": "Size",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "size.setTreeType",
+        "title": "Set View As",
+        "shortTitle": "View As",
+        "category": "Size",
+        "icon": "$(list-tree)"
+      },
+      {
         "command": "size.enableGitignore",
-        "title": "Enable .gitignore"
+        "title": "Enable .gitignore",
+        "category": "Size"
       },
       {
         "command": "size.disableGitignore",
-        "title": "Disable .gitignore"
+        "title": "Disable .gitignore",
+        "category": "Size"
       },
       {
         "command": "size.openSettings",
-        "title": "Settings"
+        "title": "Settings",
+        "category": "Size"
+      },
+      {
+        "command": "size.ignorePath",
+        "title": "Add filter pattern",
+        "icon": "$(dash)",
+        "category": "Size"
+      },
+      {
+        "command": "size.includePath",
+        "title": "Remove filter pattern",
+        "icon": "$(close)",
+        "category": "Size"
+      },
+      {
+        "command": "size.toggleFilterMode",
+        "title": "Invert filter mode",
+        "category": "Size",
+        "icon": "$(color-mode)"
       }
     ],
     "configuration": {
       "title": "Size",
       "properties": {
+        "size.showFoldersFirst": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show folders first"
+        },
         "size.fileSizeLabel": {
           "type": "boolean",
           "default": true,
@@ -134,6 +231,21 @@
           "type": "boolean",
           "default": true,
           "description": "Show recursive file count for folders"
+        },
+        "size.compactFolders": {
+          "type": "boolean",
+          "default": true,
+          "description": "Compact folders that contain only one child folder"
+        },
+        "size.defaultTreeType": {
+          "type": "string",
+          "default": "folder",
+          "enum": [
+            "file",
+            "folder",
+            "extension"
+          ],
+          "description": "Default view mode (View As...)"
         }
       }
     }
