@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "Folder size tree, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "icon": "images/cat.png",
   "engines": {
     "vscode": "^1.70.0"
@@ -44,7 +44,7 @@
           "id": "size.sizeTree",
           "name": "Size",
           "when": "workbenchState != empty",
-          "contextualTitle": "Project Size",
+          "contextualTitle": "Size Explorer",
           "icon": "$(pie-chart)"
         }
       ]

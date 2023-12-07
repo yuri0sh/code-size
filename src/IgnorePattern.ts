@@ -15,6 +15,7 @@ export abstract class IgnorePattern {
 export class IgnoreFile extends IgnorePattern {
 	constructor(public uri: vscode.Uri, public folder?: boolean) {
 		super();
+		this.id = uri.toString() + '+fs';
 	}
 
 	matchString(uri: string) {
@@ -28,6 +29,7 @@ export class IgnoreFile extends IgnorePattern {
 export class IgnoreRegex extends IgnorePattern {
 	constructor(public regex: RegExp) {
 		super();
+		this.id = regex.toString() + '+re';
 	}
 
 	matchString(uri: string) {
@@ -38,6 +40,7 @@ export class IgnoreRegex extends IgnorePattern {
 export class IgnoreExtension extends IgnorePattern {
 	constructor(public extension: string) {
 		super();
+		this.id = extension + '+ext';
 	}
 
 	matchString(uri: string) {
