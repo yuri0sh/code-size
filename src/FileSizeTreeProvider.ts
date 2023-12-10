@@ -275,7 +275,16 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 			folderItems.push(folderItem);
 		}
 
-		let children: FileSizeTreeItem[] = [...folderItems, ...fileItems];
+		let children: FileSizeTreeItem[];
+		if (this.displayFoldersFirst) {
+			children = [
+				...folderItems.sort((a, b) => b.size - a.size), 
+				...fileItems.sort((a, b) => b.size - a.size)
+			];
+		} else {
+			children = [...folderItems, ...fileItems].sort((a, b) => b.size - a.size);
+		}
+
 		const totalSize = children.reduce((acc, cur) => acc + cur.size, 0);
         const totalCount = children.reduce((acc, cur) => acc + (cur.folder ? cur.totalFileCount : 1), 0);
 		// const total
@@ -392,7 +401,6 @@ export class FileSizeTreeItem extends vscode.TreeItem {
 	constructor(itemUri: vscode.Uri, children: FileSizeTreeItem[], size: number = 0, isFolder = false, fileCount = 1, unfilteredFileCount = 1, contextValue?: string) {
 		super(itemUri, isFolder ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
 		this.children = children;
-		this.children.sort((a, b) => b.size - a.size);
 		this.children.forEach((item) => item.parent = this);
 		this.size = size;
         this.folder = isFolder;
