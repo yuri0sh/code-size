@@ -368,7 +368,14 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 	}
 
 	addFilterRule(rule: FilterRule) {
-		if (rule.id && this.filterRules.some(el => el.id === rule.id)) {return;}
+		if (rule.id) {
+			let existing = this.filterRules.find((el) => el.id === rule.id);
+			if (existing) {
+				existing.enabled = true;
+				this.refresh(false);
+				return;
+			}
+		}
 		this.filterRules.push(rule);
 		this.refresh(false);
 	}
