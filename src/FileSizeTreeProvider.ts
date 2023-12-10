@@ -17,34 +17,6 @@ async function readFoldersGitIgnore(folderUri: vscode.Uri) {
 
 type BranchType = 'folder' | 'extension' | 'file';
 
-function filterRuleToTreeItem(rule: FilterRule) {
-	const item: vscode.TreeItem | any = {
-		label: "Unknown Filter",
-		filterRule: rule,
-		contextValue: 'ignoreItem',
-		checkboxState: rule.enabled ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
-	};
-
-	if (rule instanceof RegexFilterRule) {
-		item.label = rule.regex.toString();
-		item.regex = rule.regex;
-		item.iconPath = new vscode.ThemeIcon('regex');
-		item.description = 'Regex';
-	} else if (rule instanceof FileFilterRule) {
-		item.label = rule.uri.path.split('/').pop() ?? '';
-		item.description = rule.folder ? "Folder" : "File";
-		item.resourceUri = rule.uri;
-		item.collapsible = false;
-		item.iconPath = rule.folder ? new vscode.ThemeIcon('folder-opened') : vscode.ThemeIcon.File;
-	} else if (rule instanceof ExtensionFilterRule) {
-		item.label = rule.fileExtension;
-		item.iconPath = vscode.ThemeIcon.File;
-		item.description = 'Extension';
-	}
-
-	return item;
-}
-
 export { FileFilterRule as IgnoreFile, RegexFilterRule as IgnoreRegex, ExtensionFilterRule as IgnoreExtension };
 
 export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
@@ -66,7 +38,36 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		];
     }
 
-	filterRuleToTreeItem = filterRuleToTreeItem;
+	filterRuleToTreeItem(rule: FilterRule) {
+		const item: vscode.TreeItem | any = {
+			label: "Unknown Filter",
+			filterRule: rule,
+			contextValue: 'ignoreItem',
+			checkboxState: rule.enabled ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
+		};
+		if (!this.togglableFiltersConfig) {
+			delete item.checkboxState;
+		}
+	
+		if (rule instanceof RegexFilterRule) {
+			item.label = rule.regex.toString();
+			item.regex = rule.regex;
+			item.iconPath = new vscode.ThemeIcon('regex');
+			item.description = 'Regex';
+		} else if (rule instanceof FileFilterRule) {
+			item.label = rule.uri.path.split('/').pop() ?? '';
+			item.description = rule.folder ? "Folder" : "File";
+			item.resourceUri = rule.uri;
+			item.collapsible = false;
+			item.iconPath = rule.folder ? new vscode.ThemeIcon('folder-opened') : vscode.ThemeIcon.File;
+		} else if (rule instanceof ExtensionFilterRule) {
+			item.label = rule.fileExtension;
+			item.iconPath = vscode.ThemeIcon.File;
+			item.description = 'Extension';
+		}
+	
+		return item;
+	}
 
 	// fs providers, in order of priority
 	fileSystemProviders: FileSystemProvider[];
@@ -157,7 +158,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		// adds the filter/whitelist node to the root
 		if (this.filterRules.length > 0 || this.filterPass) {
 			root.splice(0, 0, {
-				children: this.filterRules.map(filterRuleToTreeItem),
+				children: this.filterRules.map(this.filterRuleToTreeItem.bind(this)),
 				collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
 				contextValue: 'ignoreRoot',
 				ignoreRoot: true
@@ -181,6 +182,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
     showFolderContentCountConfig: boolean = true;
 	handleGitignoreConfig: boolean = true;
 	compactFoldersConfig: boolean = true;
+	togglableFiltersConfig: boolean = false;
 
 
     getParent(element: FileSizeTreeItem): vscode.ProviderResult<FileSizeTreeItem> {
@@ -356,6 +358,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
         this.showFolderContentCountConfig = vscode.workspace.getConfiguration('size').get('folderContentCount') as boolean;
 		this.compactFoldersConfig = vscode.workspace.getConfiguration('size').get('compactFolders') as boolean;
 		this.displayFoldersFirst = vscode.workspace.getConfiguration('size').get('foldersFirst') as boolean;
+		this.togglableFiltersConfig = vscode.workspace.getConfiguration('size').get('togglableFilters') as boolean;
     }
 
 	refresh(recalculateSize: boolean): void {

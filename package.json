@@ -217,6 +217,11 @@
     "configuration": {
       "title": "Size",
       "properties": {
+        "size.togglableFilters": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow toggling individual filters (messes with the UI)"
+        },
         "size.foldersFirst": {
           "type": "boolean",
           "default": false,

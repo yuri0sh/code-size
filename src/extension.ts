@@ -122,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!item) {
 			const includeAll = {label: "Remove All", filterRule: null};
 
-			let ruleItems = treeDataProvider.filterRules.map(treeDataProvider.filterRuleToTreeItem);
+			let ruleItems = treeDataProvider.filterRules.map(treeDataProvider.filterRuleToTreeItem.bind(treeDataProvider));
 			ruleItems.forEach((e) => e.description = e.description + (e.filterRule.enabled ? '' : ' (Disabled)'));
 
 			if (ruleItems.length === 0) {
