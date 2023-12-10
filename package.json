@@ -197,13 +197,13 @@
       },
       {
         "command": "size.ignorePath",
-        "title": "Add filter pattern",
+        "title": "Add filter rule",
         "icon": "$(dash)",
         "category": "Size"
       },
       {
         "command": "size.includePath",
-        "title": "Remove filter pattern",
+        "title": "Remove filter rule",
         "icon": "$(close)",
         "category": "Size"
       },
@@ -217,10 +217,10 @@
     "configuration": {
       "title": "Size",
       "properties": {
-        "size.showFoldersFirst": {
+        "size.foldersFirst": {
           "type": "boolean",
           "default": false,
-          "description": "Show folders first"
+          "description": "Give folders priority in sorting"
         },
         "size.fileSizeLabel": {
           "type": "boolean",

@@ -167,7 +167,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		return root;
 	}
 
-	getChildren(element?: FileSizeTreeItem | undefined): ProviderResult<any[]> {
+	getChildren(element?: FileSizeTreeItem | undefined): vscode.ProviderResult<any[]> {
 		if (element === undefined) {
 			return this.getRoot().then(root => this.buildTree(root, this.branchBy));
 		}

@@ -130,8 +130,8 @@ export class GitHubFileSystemProvider implements FileSystemProvider {
 	}
 
 	async init(uri: vscode.Uri) {
-		if (uri.scheme !== 'vscode-vfs') return;
-        if (!uri.authority.startsWith('github')) return;
+		if (uri.scheme !== 'vscode-vfs') {return;}
+        if (!uri.authority.startsWith('github')) {return;}
 
 		let str = uri.toString();
 		if (!this.rootUris?.some(el => el.toString() === str)) {
@@ -150,7 +150,8 @@ export class GitHubFileSystemProvider implements FileSystemProvider {
         let name = uri.path.split('/')[2];
 		let headers = {};
 		if (this.token) {
-			headers = { Authorization: `token ${this.token}` } ;
+			// eslint-disable-next-line @typescript-eslint/naming-convention
+			headers = { "Authorization": `token ${this.token}` } ;
 		}
         let laxios = axios.create({ baseURL: "https://api.github.com", headers });
 		let oid;
@@ -211,8 +212,8 @@ export class GitHubFileSystemProvider implements FileSystemProvider {
 	token: string | undefined;
 
 	async _initFor(uri: vscode.Uri): Promise<void> {
-		if (uri.scheme !== 'vscode-vfs') return;
-        if (!uri.authority.startsWith('github')) return;
+		if (uri.scheme !== 'vscode-vfs') {return;}
+        if (!uri.authority.startsWith('github')) {return;}
 
 		try {
 			await this.fetchRepoOf(uri);
