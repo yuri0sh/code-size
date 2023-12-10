@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export abstract class IgnorePattern {
+export abstract class FilterRule {
 	match(uri: vscode.Uri) {
 		return this.matchString(uri.toString());
 	}
@@ -13,7 +13,7 @@ export abstract class IgnorePattern {
 	}
 }
 
-export class IgnoreFile extends IgnorePattern {
+export class FileFilterRule extends FilterRule {
 	constructor(public uri: vscode.Uri, public folder?: boolean) {
 		super();
 		this.id = uri.toString() + '+fs';
@@ -27,7 +27,7 @@ export class IgnoreFile extends IgnorePattern {
 	}
 }
 
-export class IgnoreRegex extends IgnorePattern {
+export class RegexFilterRule extends FilterRule {
 	constructor(public regex: RegExp) {
 		super();
 		this.id = regex.toString() + '+re';
@@ -38,13 +38,13 @@ export class IgnoreRegex extends IgnorePattern {
 	}
 }
 
-export class IgnoreExtension extends IgnorePattern {
-	constructor(public extension: string) {
+export class ExtensionFilterRule extends FilterRule {
+	constructor(public fileExtension: string) {
 		super();
-		this.id = extension + '+ext';
+		this.id = fileExtension + '+ext';
 	}
 
 	matchString(uri: string) {
-		return uri.endsWith(this.extension);
+		return uri.endsWith(this.fileExtension);
 	}
 }

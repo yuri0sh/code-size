@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { FileSizeTreeItem, FileSizeTreeDataProvider } from './FileSizeTreeProvider';
-import { IgnoreRegex, IgnoreFile, IgnoreExtension } from './IgnorePattern';
-// import { GitExtension } from './git-types/git';
+import { RegexFilterRule, FileFilterRule, ExtensionFilterRule } from './FilterRule';
 
 // TODO: add optional file type grouping
 export function activate(context: vscode.ExtensionContext) {
@@ -89,19 +88,19 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand('size.ignorePath',  async (item: FileSizeTreeItem) => {
 		if (item?.contextValue === 'extRoot') {
 			if (!item.resourceUri) {return;}
-			treeDataProvider.addIgnorePattern(new IgnoreExtension(item.resourceUri.path.replace('/', '')));
+			treeDataProvider.addFilterRule(new ExtensionFilterRule(item.resourceUri.path.replace('/', '')));
 			return;
 		}
 
 		if (!item?.contextValue && item?.resourceUri) {
-			treeDataProvider.addIgnorePattern(new IgnoreFile(item.resourceUri, item.folder));
+			treeDataProvider.addFilterRule(new FileFilterRule(item.resourceUri, item.folder));
 			return;
 		}
 
 
 		let value = await vscode.window.showInputBox({
-			title: 'Size: Ignore Pattern',
-			placeHolder: 'Enter a regex pattern to ignore',
+			title: 'Size: Add Filter Rule',
+			placeHolder: 'Enter a regex pattern to filter',
 			validateInput: (value) => {
 				try {
 					new RegExp(value);
@@ -114,18 +113,18 @@ export function activate(context: vscode.ExtensionContext) {
 
 		if (!value) {return;}
 
-		treeDataProvider.addIgnorePattern(new IgnoreRegex(new RegExp(value)));
+		treeDataProvider.addFilterRule(new RegexFilterRule(new RegExp(value)));
 
 		return;
 	});
 
 	vscode.commands.registerCommand('size.includePath', async (item: any) => {
 		if (!item) {
-			const includeAll = {label: "Remove All", pattern: null};
+			const includeAll = {label: "Remove All", filterRule: null};
 
-			let patternItems = treeDataProvider.ignorePatterns.map(treeDataProvider.ignorePatternToTreeItem);
+			let ruleItems = treeDataProvider.filterRules.map(treeDataProvider.filterRuleToTreeItem);
 
-			if (patternItems.length === 0) {
+			if (ruleItems.length === 0) {
 				vscode.window.showInformationMessage('No filters set, nothing to remove');
 				return;
 			}
@@ -133,24 +132,24 @@ export function activate(context: vscode.ExtensionContext) {
 			let value = await vscode.window.showQuickPick([
 				includeAll,
 				{kind: vscode.QuickPickItemKind.Separator},
-				...patternItems
+				...ruleItems
 			]);
 
 			if (!value) {return;}
 
-			if (value.pattern === null) {
-				treeDataProvider.resetIgnorePatterns();
+			if (value.filterRule === null) {
+				treeDataProvider.resetFilters();
 			} else {
-				treeDataProvider.removeIgnorePattern(value.pattern);
+				treeDataProvider.removeFilterRule(value.filterRule);
 			}
 
 			return;
 		}
 
 		if (item.contextValue === 'ignoreRoot') {
-			treeDataProvider.resetIgnorePatterns();
+			treeDataProvider.resetFilters();
 		} else {
-			treeDataProvider.removeIgnorePattern(item?.pattern);
+			treeDataProvider.removeFilterRule(item?.filterRule);
 		}
 	});
 

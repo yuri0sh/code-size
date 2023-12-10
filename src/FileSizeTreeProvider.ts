@@ -4,7 +4,7 @@ import ignore from 'ignore';
 import * as vscode from 'vscode';
 import { GitHubFileSystemProvider, FileSystemProvider, VSCodeFileSystemProvider } from './FileSystemProviders';
 import { ProviderResult } from './git-types/git';
-import { IgnorePattern, IgnoreRegex, IgnoreFile, IgnoreExtension } from './IgnorePattern';
+import { FilterRule, RegexFilterRule, FileFilterRule, ExtensionFilterRule } from './FilterRule';
 
 async function readFoldersGitIgnore(folderUri: vscode.Uri) {
 	let gitIgnorePath = vscode.Uri.joinPath(folderUri, '.gitignore');
@@ -18,27 +18,27 @@ async function readFoldersGitIgnore(folderUri: vscode.Uri) {
 
 type BranchType = 'folder' | 'extension' | 'file';
 
-function ignorePatternToTreeItem(pattern: IgnorePattern) {
+function filterRuleToTreeItem(rule: FilterRule) {
 	const item: vscode.TreeItem | any = {
-		label: "Unknown Pattern",
-		pattern: pattern,
+		label: "Unknown Filter",
+		filterRule: rule,
 		contextValue: 'ignoreItem',
-		checkboxState: pattern.enabled ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
+		checkboxState: rule.enabled ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
 	};
 
-	if (pattern instanceof IgnoreRegex) {
-		item.label = pattern.regex.toString();
-		item.regex = pattern.regex;
+	if (rule instanceof RegexFilterRule) {
+		item.label = rule.regex.toString();
+		item.regex = rule.regex;
 		item.iconPath = new vscode.ThemeIcon('regex');
 		item.description = 'Regex';
-	} else if (pattern instanceof IgnoreFile) {
-		item.label = pattern.uri.path.split('/').pop() ?? '';
-		item.description = pattern.folder ? "Folder" : "File";
-		item.resourceUri = pattern.uri;
+	} else if (rule instanceof FileFilterRule) {
+		item.label = rule.uri.path.split('/').pop() ?? '';
+		item.description = rule.folder ? "Folder" : "File";
+		item.resourceUri = rule.uri;
 		item.collapsible = false;
-		item.iconPath = pattern.folder ? new vscode.ThemeIcon('folder-opened') : vscode.ThemeIcon.File;
-	} else if (pattern instanceof IgnoreExtension) {
-		item.label = pattern.extension;
+		item.iconPath = rule.folder ? new vscode.ThemeIcon('folder-opened') : vscode.ThemeIcon.File;
+	} else if (rule instanceof ExtensionFilterRule) {
+		item.label = rule.fileExtension;
 		item.iconPath = vscode.ThemeIcon.File;
 		item.description = 'Extension';
 	}
@@ -46,17 +46,17 @@ function ignorePatternToTreeItem(pattern: IgnorePattern) {
 	return item;
 }
 
-export { IgnoreFile, IgnoreRegex, IgnoreExtension };
+export { FileFilterRule as IgnoreFile, RegexFilterRule as IgnoreRegex, ExtensionFilterRule as IgnoreExtension };
 
 export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 	onDidChangeCheckboxState(onDidChangeCheckboxState: vscode.TreeCheckboxChangeEvent<any>): void {
 		let items = onDidChangeCheckboxState.items;
 		for (let [item, state] of items) {
-			item.pattern!.enabled = state === vscode.TreeItemCheckboxState.Checked;
+			item.filterRule!.enabled = state === vscode.TreeItemCheckboxState.Checked;
 		}
 		this.refresh(false);
 	}
-	ignorePatterns: IgnorePattern[] = [];
+	filterRules: FilterRule[] = [];
 	displayFoldersFirst: boolean = false;
 
     constructor() {
@@ -67,7 +67,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		];
     }
 
-	ignorePatternToTreeItem = ignorePatternToTreeItem;
+	filterRuleToTreeItem = filterRuleToTreeItem;
 
 	// fs providers, in order of priority
 	fileSystemProviders: FileSystemProvider[];
@@ -78,8 +78,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 
 		if (item.contextValue === 'ignoreRoot') {
 			item.label = this.filterPass ? 'Whitelist' : 'Filter';
-			// item.description = `${this.ignorePatterns.length} ${this.filterPass ? 'include' : 'exclude'} patterns`;
-			item.description = `[${this.ignorePatterns.length} patterns]`;
+			item.description = `[${this.filterRules.length} rules]`;
 			item.id = 'ignoreRoot';
 			item.iconPath = this.filterPass ? new vscode.ThemeIcon('pass', new vscode.ThemeColor('foreground')) : new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('errorForeground'));
 
@@ -157,9 +156,9 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		}
 
 		// adds the filter/whitelist node to the root
-		if (this.ignorePatterns.length > 0 || this.filterPass) {
+		if (this.filterRules.length > 0 || this.filterPass) {
 			root.splice(0, 0, {
-				children: this.ignorePatterns.map(ignorePatternToTreeItem),
+				children: this.filterRules.map(filterRuleToTreeItem),
 				collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
 				contextValue: 'ignoreRoot',
 				ignoreRoot: true
@@ -249,7 +248,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 
 		entries.forEach((el) => {
 			let key = el.uri.toString();
-			let filtered = this.ignorePatterns.some((pattern) => pattern.enabled && pattern.matchString(key));
+			let filtered = this.filterRules.some((rule) => rule.enabled && rule.matchString(key));
 			el.filtered = this.filterPass ? !filtered : filtered;
 		});
 
@@ -369,22 +368,22 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 	  	this._onDidChangeTreeData.fire();
 	}
 
-	addIgnorePattern(pattern: IgnorePattern) {
-		if (pattern.id && this.ignorePatterns.some(el => el.id === pattern.id)) {return;}
-		this.ignorePatterns.push(pattern);
+	addFilterRule(rule: FilterRule) {
+		if (rule.id && this.filterRules.some(el => el.id === rule.id)) {return;}
+		this.filterRules.push(rule);
 		this.refresh(false);
 	}
 
-	removeIgnorePattern(pattern: IgnorePattern) {
-		this.ignorePatterns = this.ignorePatterns.filter((el) => el !== pattern);
-		if (this.ignorePatterns.length === 0) {
+	removeFilterRule(rule: FilterRule) {
+		this.filterRules = this.filterRules.filter((el) => el !== rule);
+		if (this.filterRules.length === 0) {
 			this.setFilterPass(false);
 		}
 		this.refresh(false);
 	}
 
-	resetIgnorePatterns() {
-		this.ignorePatterns = [];
+	resetFilters() {
+		this.filterRules = [];
 		this.setFilterPass(false);
 		this.refresh(false);
 	}
