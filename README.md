@@ -36,6 +36,10 @@ Files and folders that are more important tend to be larger in size. That means 
 
 * `size.defaultTreeType` - sets default "View As..."
 
+* `size.foldersFirst` - gives priority to folders when sorting even if folders are smaller than files
+
+* `size.togglableFilters` - whether to allow toggling filters on and off (may offset some tree elements)
+
 ## Coming soon
 
 Similar explorer for document symbols size (à la document outline view), but count lines instead
