@@ -123,24 +123,20 @@ export function activate(context: vscode.ExtensionContext) {
 			const includeAll = {label: "Remove All", filterRule: null};
 
 			let ruleItems = treeDataProvider.filterRules.map(treeDataProvider.filterRuleToTreeItem);
+			ruleItems.forEach((e) => e.description = e.description + (e.filterRule.enabled ? '' : ' (Disabled)'));
 
 			if (ruleItems.length === 0) {
 				vscode.window.showInformationMessage('No filters set, nothing to remove');
 				return;
 			}
 
-			let value = await vscode.window.showQuickPick([
-				includeAll,
-				{kind: vscode.QuickPickItemKind.Separator},
-				...ruleItems
-			]);
+			let value = await vscode.window.showQuickPick(ruleItems, 
+				{canPickMany: true, placeHolder: 'Select filters to remove'});
 
 			if (!value) {return;}
 
-			if (value.filterRule === null) {
-				treeDataProvider.resetFilters();
-			} else {
-				treeDataProvider.removeFilterRule(value.filterRule);
+			for (let rule of value) {
+				treeDataProvider.removeFilterRule(rule.filterRule);
 			}
 
 			return;
