@@ -5,6 +5,7 @@ export abstract class IgnorePattern {
 		return this.matchString(uri.toString());
 	}
 
+	enabled = true;
 	id?: string;
 
 	matchString(_: string) {

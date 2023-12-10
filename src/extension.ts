@@ -7,7 +7,10 @@ import { IgnoreRegex, IgnoreFile, IgnoreExtension } from './IgnorePattern';
 export function activate(context: vscode.ExtensionContext) {
 	const treeDataProvider = new FileSizeTreeDataProvider();
 
-	let treeView = vscode.window.createTreeView('size.sizeTree', { treeDataProvider });
+	let treeView = vscode.window.createTreeView('size.sizeTree', { treeDataProvider, canSelectMany: true });
+	
+	treeView.onDidChangeCheckboxState(treeDataProvider.onDidChangeCheckboxState.bind(treeDataProvider));
+	treeView.description = 'Explorer';
 
 	let worspaceListener = vscode.workspace.onDidChangeWorkspaceFolders( () => treeDataProvider.refresh(true));
 	let refresh = vscode.commands.registerCommand('size.refreshTree', () => treeDataProvider.refresh(true));

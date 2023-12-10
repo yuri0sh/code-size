@@ -22,7 +22,8 @@ function ignorePatternToTreeItem(pattern: IgnorePattern) {
 	const item: vscode.TreeItem | any = {
 		label: "Unknown Pattern",
 		pattern: pattern,
-		contextValue: 'ignoreItem'
+		contextValue: 'ignoreItem',
+		checkboxState: pattern.enabled ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
 	};
 
 	if (pattern instanceof IgnoreRegex) {
@@ -48,6 +49,13 @@ function ignorePatternToTreeItem(pattern: IgnorePattern) {
 export { IgnoreFile, IgnoreRegex, IgnoreExtension };
 
 export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
+	onDidChangeCheckboxState(onDidChangeCheckboxState: vscode.TreeCheckboxChangeEvent<any>): void {
+		let items = onDidChangeCheckboxState.items;
+		for (let [item, state] of items) {
+			item.pattern!.enabled = state === vscode.TreeItemCheckboxState.Checked;
+		}
+		this.refresh(false);
+	}
 	ignorePatterns: IgnorePattern[] = [];
 	displayFoldersFirst: boolean = false;
 
@@ -241,7 +249,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 
 		entries.forEach((el) => {
 			let key = el.uri.toString();
-			let filtered = this.ignorePatterns.some((pattern) => pattern.matchString(key));
+			let filtered = this.ignorePatterns.some((pattern) => pattern.enabled && pattern.matchString(key));
 			el.filtered = this.filterPass ? !filtered : filtered;
 		});
 
