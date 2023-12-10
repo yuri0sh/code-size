@@ -3,7 +3,6 @@ import { Ignore } from 'ignore';
 import ignore from 'ignore';
 import * as vscode from 'vscode';
 import { GitHubFileSystemProvider, FileSystemProvider, VSCodeFileSystemProvider } from './FileSystemProviders';
-import { ProviderResult } from './git-types/git';
 import { FilterRule, RegexFilterRule, FileFilterRule, ExtensionFilterRule } from './FilterRule';
 
 async function readFoldersGitIgnore(folderUri: vscode.Uri) {
