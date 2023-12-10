@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "Folder size tree, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "icon": "images/cat.png",
   "engines": {
     "vscode": "^1.70.0"
@@ -89,12 +89,12 @@
         {
           "command": "size.modeFiles",
           "group": "navigation@2",
-          "when": "view == size.sizeTree && size.treeType == 'extension'"
+          "when": "false && view == size.sizeTree && size.treeType == 'extension'"
         },
         {
           "command": "size.modeFolders",
           "group": "navigation@2",
-          "when": "view == size.sizeTree && size.treeType == 'file'"
+          "when": "view == size.sizeTree && size.treeType == 'extension'"
         },
         {
           "command": "size.modeExtensions",
