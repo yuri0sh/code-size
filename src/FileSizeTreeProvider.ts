@@ -29,7 +29,9 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		this.refresh(false);
 	}
 	filterRules: FilterRule[] = [];
-	displayFoldersFirst: boolean = false;
+	displayFoldersFirstConfig: boolean = false;
+	displayBase2UnitSizeConfig: boolean = false;
+
 	filterRulesFSProvider?: FilterFileSystemProvider;
 
     constructor() {
@@ -99,7 +101,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 
 		if (item.contextValue === 'fsRoot' || item.contextValue === 'extRoot' || !item.contextValue) {
 			const parent = item.parent;
-			let sizeString = bytesToHuman(item.size);
+			let sizeString = bytesToHuman(item.size, !this.displayBase2UnitSizeConfig);
 
 			let titleString = (item.resourceUri!.path.split('/').pop() ?? '');
 			if (parent && item.folder) {
@@ -292,7 +294,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		}
 
 		let children: FileSizeTreeItem[];
-		if (this.displayFoldersFirst) {
+		if (this.displayFoldersFirstConfig) {
 			children = [
 				...folderItems.sort((a, b) => b.size - a.size), 
 				...fileItems.sort((a, b) => b.size - a.size)
@@ -362,10 +364,11 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 	readonly onDidChangeTreeData: vscode.Event<FileSizeTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
   
     _updateConfig() {
+		this.displayBase2UnitSizeConfig = vscode.workspace.getConfiguration('size').get('fileSizeUnits') === "1024 (KiB/MiB/GiB/TiB)";
         this.fileSizeLabelConfig = vscode.workspace.getConfiguration('size').get('fileSizeLabel') as boolean;
         this.showFolderContentCountConfig = vscode.workspace.getConfiguration('size').get('folderContentCount') as boolean;
 		this.compactFoldersConfig = vscode.workspace.getConfiguration('size').get('compactFolders') as boolean;
-		this.displayFoldersFirst = vscode.workspace.getConfiguration('size').get('foldersFirst') as boolean;
+		this.displayFoldersFirstConfig = vscode.workspace.getConfiguration('size').get('foldersFirst') as boolean;
 		this.togglableFiltersConfig = vscode.workspace.getConfiguration('size').get('togglableFilters') as boolean;
     }
 
