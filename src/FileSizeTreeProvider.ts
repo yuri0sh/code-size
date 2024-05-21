@@ -3,7 +3,8 @@ import { Ignore } from 'ignore';
 import ignore from 'ignore';
 import * as vscode from 'vscode';
 import { GitHubFileSystemProvider, FileSystemProvider, VSCodeFileSystemProvider } from './FileSystemProviders';
-import { FilterRule, RegexFilterRule, FileFilterRule, ExtensionFilterRule } from './FilterRule';
+import { FilterRule, RegexFilterRule, FileFilterRule, ExtensionFilterRule, FolderFilterRule } from './FilterRule';
+import FilterFileSystemProvider from './FilterFileSystemProvider';
 
 async function readFoldersGitIgnore(folderUri: vscode.Uri) {
 	let gitIgnorePath = vscode.Uri.joinPath(folderUri, '.gitignore');
@@ -29,6 +30,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 	}
 	filterRules: FilterRule[] = [];
 	displayFoldersFirst: boolean = false;
+	filterRulesFSProvider?: FilterFileSystemProvider;
 
     constructor() {
         this._updateConfig();
@@ -56,10 +58,16 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 			item.description = 'Regex';
 		} else if (rule instanceof FileFilterRule) {
 			item.label = rule.uri.path.split('/').pop() ?? '';
-			item.description = rule.folder ? "Folder" : "File";
+			item.description = "File";
 			item.resourceUri = rule.uri;
 			item.collapsible = false;
-			item.iconPath = rule.folder ? new vscode.ThemeIcon('folder-opened') : vscode.ThemeIcon.File;
+			item.iconPath = vscode.ThemeIcon.File;
+		} else if (rule instanceof FolderFilterRule) {
+			item.label = rule.uri.path.split('/').pop() ?? '' + '/';
+			item.description = "Folder";
+			item.resourceUri = rule.uri;
+			item.collapsible = false;
+			item.iconPath = new vscode.ThemeIcon('folder-opened');
 		} else if (rule instanceof ExtensionFilterRule) {
 			item.label = rule.fileExtension;
 			item.iconPath = vscode.ThemeIcon.File;
@@ -380,6 +388,9 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 			}
 		}
 		this.filterRules.push(rule);
+		
+		this.filterRulesFSProvider?.refresh();
+		
 		this.refresh(false);
 	}
 
@@ -388,17 +399,26 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		if (this.filterRules.length === 0) {
 			this.setFilterPass(false);
 		}
+
+		this.filterRulesFSProvider?.refresh();
+
 		this.refresh(false);
 	}
 
 	resetFilters() {
 		this.filterRules = [];
 		this.setFilterPass(false);
+
+		this.filterRulesFSProvider?.refresh();
+
 		this.refresh(false);
 	}
 
 	setFilterPass(filterPass: boolean) {
 		this.filterPass = filterPass;
+
+		this.filterRulesFSProvider?.refresh();
+
 		this.refresh(false);
 	}
 }

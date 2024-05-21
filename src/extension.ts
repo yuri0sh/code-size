@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { FileSizeTreeItem, FileSizeTreeDataProvider } from './FileSizeTreeProvider';
-import { RegexFilterRule, FileFilterRule, ExtensionFilterRule } from './FilterRule';
+import { RegexFilterRule, FileFilterRule, ExtensionFilterRule, FolderFilterRule } from './FilterRule';
+import FilterFileSystemProvider from './FilterFileSystemProvider';
 
 // TODO: add optional file type grouping
 export function activate(context: vscode.ExtensionContext) {
@@ -18,6 +19,15 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('setContext', 'size.treeType', 'file');
 		treeDataProvider.branchBy = 'file';
 		treeDataProvider.refresh(false);
+	});
+
+	let fsProvider = new FilterFileSystemProvider(treeDataProvider);
+	vscode.workspace.registerFileSystemProvider('size-explorer-extension', fsProvider, {isCaseSensitive: true});
+
+	let openFilterTextView = vscode.commands.registerCommand('size.openFilterTextView', () => {
+		vscode.workspace.openTextDocument(vscode.Uri.parse('size-explorer-extension:/filter.json')).then((doc) => {
+			vscode.window.showTextDocument(doc);
+		});
 	});
 
 	let modeExtensions = vscode.commands.registerCommand('size.modeExtensions', () => {
@@ -81,8 +91,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	let toggleFilterMode = vscode.commands.registerCommand('size.toggleFilterMode', () => {
-		treeDataProvider.filterPass = !treeDataProvider.filterPass;
-		treeDataProvider.refresh(false);
+		treeDataProvider.setFilterPass(!treeDataProvider.filterPass);
 	});
 
 	vscode.commands.registerCommand('size.ignorePath',  async (item: FileSizeTreeItem) => {
@@ -93,10 +102,13 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 
 		if (!item?.contextValue && item?.resourceUri) {
-			treeDataProvider.addFilterRule(new FileFilterRule(item.resourceUri, item.folder));
-			return;
+			if (!item.folder) {
+				return treeDataProvider.addFilterRule(new FileFilterRule(item.resourceUri));
+			} else {
+				return treeDataProvider.addFilterRule(new FolderFilterRule(item.resourceUri));
+			}
 		}
-
+		
 
 		let value = await vscode.window.showInputBox({
 			title: 'Size: Add Filter Rule',

@@ -129,6 +129,10 @@
       ],      
       "view/item/context": [
         {
+          "command": "size.openFilterTextView",
+          "when": "view == size.sizeTree && viewItem == ignoreRoot"
+        },
+        {
           "command": "size.toggleFilterMode",
           "when": "viewItem == ignoreRoot",
           "group": "inline"
@@ -146,6 +150,12 @@
       ]
     },
     "commands": [
+      {
+        "command": "size.openFilterTextView",
+        "title": "Edit filter JSON",
+        "shortTitle": "Edit",
+        "category": "Size"
+      },
       {
         "command": "size.refreshTree",
         "title": "Refresh",
