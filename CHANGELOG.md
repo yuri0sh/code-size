@@ -2,7 +2,12 @@
 
 All notable changes to the "size" extension will be documented in this file.
 
-## [Unreleased]
+## [0.3.0]
+
+- Added `size.fileSizeUnits` config option (default: `1000 (kB/MB/GB/TB)`)
+- JSON filter config representation
+- Folder icons
+- Fixed some bugs
 
 ## [0.2.6]
 

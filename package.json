@@ -3,7 +3,7 @@
   "displayName": "Size",
   "description": "Folder size tree, github.dev compatible",
   "publisher": "yurish",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "icon": "images/cat.png",
   "engines": {
     "vscode": "^1.70.0"
@@ -234,7 +234,7 @@
             "1024 (KiB/MiB/GiB/TiB)",
             "1000 (kB/MB/GB/TB)"
           ],
-          "description": "Switch between base-2 (Windows, ISO/IEC 80000-13) and base-10 (SI) file size units"
+          "description": "Toggle between base-2 (Windows, ISO/IEC 80000-13) and base-10 (SI) file size units"
         },
         "size.togglableFilters": {
           "type": "boolean",
