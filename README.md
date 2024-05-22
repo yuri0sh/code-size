@@ -1,13 +1,13 @@
 <img alt="Display of file size" src="images/b.png" width="260px" />
 
-A simple yet astonishingly helpful extension for VS Code and GitHub.
-Particularly useful for building familiarity with project contents.
+A simple yet astonishingly useful extension for VS Code and GitHub.  
+Use it to build to build understanding of unfamiliar codebases.
 
 ## Motivation
 
 There are many extensions like this. Why make a new one?
 
-What makes this one unique is its compatibility with Remote Repositories and browser vscodium editors.  
+What makes this one unique is its compatibility with Remote Repositories and browser homed vscodium editors.  
 The main goal was to be able to open any repo in [github.dev](https://github.dev) (hotkey: `.` on the repos page) and get a quick overview of the entire project.
 
 Files and folders that are more important tend to be larger in size. You can get a good heuristic of what the repository is all about just by looking at it topologically, without spending much time manually going through the files or having to download it.
