@@ -236,11 +236,6 @@
           ],
           "description": "Toggle between base-2 (Windows, ISO/IEC 80000-13) and base-10 (SI) file size units"
         },
-        "size.togglableFilters": {
-          "type": "boolean",
-          "default": false,
-          "description": "Allow toggling individual filters (messes with the UI)"
-        },
         "size.foldersFirst": {
           "type": "boolean",
           "default": false,

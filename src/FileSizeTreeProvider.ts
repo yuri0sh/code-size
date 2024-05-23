@@ -21,13 +21,6 @@ type BranchType = 'folder' | 'extension' | 'file';
 export { FileFilterRule as IgnoreFile, RegexFilterRule as IgnoreRegex, ExtensionFilterRule as IgnoreExtension };
 
 export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
-	onDidChangeCheckboxState(onDidChangeCheckboxState: vscode.TreeCheckboxChangeEvent<any>): void {
-		let items = onDidChangeCheckboxState.items;
-		for (let [item, state] of items) {
-			item.filterRule!.enabled = state === vscode.TreeItemCheckboxState.Checked;
-		}
-		this.refresh(false);
-	}
 	filterRules: FilterRule[] = [];
 	displayFoldersFirstConfig: boolean = false;
 	displayBase2UnitSizeConfig: boolean = false;
@@ -47,7 +40,6 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 			label: "Unknown Filter",
 			filterRule: rule,
 			contextValue: 'ignoreItem',
-			checkboxState: rule.enabled ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
 		};
 		if (!this.togglableFiltersConfig) {
 			delete item.checkboxState;
@@ -259,7 +251,7 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 
 		entries.forEach((el) => {
 			let key = el.uri.toString();
-			let filtered = this.filterRules.some((rule) => rule.enabled && rule.matchString(key));
+			let filtered = this.filterRules.some((rule) => rule.matchString(key));
 			el.filtered = this.filterPass ? !filtered : filtered;
 		});
 
@@ -385,8 +377,6 @@ export class FileSizeTreeDataProvider implements vscode.TreeDataProvider<any> {
 		if (rule.id) {
 			let existing = this.filterRules.find((el) => el.id === rule.id);
 			if (existing) {
-				existing.enabled = true;
-				this.refresh(false);
 				return;
 			}
 		}

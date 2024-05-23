@@ -5,7 +5,6 @@ export abstract class FilterRule {
 		return this.matchString(uri.toString());
 	}
 
-	enabled = true;
 	id?: string;
 
 	matchString(_: string) {
