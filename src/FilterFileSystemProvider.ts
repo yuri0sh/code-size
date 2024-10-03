@@ -37,7 +37,7 @@ export default class FilterFileSystemProvider implements vscode.FileSystemProvid
             rules: array
         };
         let json = JSON.stringify(data, null, 2);
-        return Buffer.from(json);
+        return (new TextEncoder()).encode(json);
     }
     writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean; }): void | Thenable<void> {
         let json = content.toString();
